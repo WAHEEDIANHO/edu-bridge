@@ -9,6 +9,9 @@ import { AuthModule } from './auth/auth.module';
 import { CacheInterceptor, CacheModule } from '@nestjs/cache-manager';
 import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
+import { EmailServiceModule } from './email-service/email-service.module';
+import { MenteeModule } from './mentee/mentee.module';
+import { MentorModule } from './mentor/mentor.module';
 
 @Module({
   imports: [
@@ -57,7 +60,10 @@ import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
         ttl: 60000, // 1 minute
         limit: 5
       }]
-    })
+    }),
+    EmailServiceModule,
+    MenteeModule,
+    MentorModule
   ],
   controllers: [],
   providers: [{provide: APP_GUARD, useClass: ThrottlerGuard}],

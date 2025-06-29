@@ -8,9 +8,16 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston/dist/winston.constants';
 import { AppExceptionFilter } from './app-exception.filter';
 import { ResponseFormatterMiddleware } from './utils/response-formatter.middleware';
-
+import * as basicAuth from 'express-basic-auth';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+
+  app.use('/api-docs', basicAuth({
+    users: { 'admin': process.env.BASIC_AUTH_PASSWORD || 'password' },
+    challenge: true,
+    realm: 'API Docs',
+    unauthorizedResponse: 'Unauthorized access to API documentation',
+  }))
 
   app.use(helmet())
   // app.use(cookieParser());
@@ -25,16 +32,11 @@ async function bootstrap() {
     .setTitle("Edu Bridge API")
     .setDescription("API documentation for the Edu Bridge application")
     .setVersion("1.0")
-    .addBearerAuth({
-      type: 'http',
-      scheme: 'bearer',
-      bearerFormat: 'JWT',
-    }, 'acccess-token')
     .addBearerAuth()
     .build();
 
   const docuement = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('api', app, docuement);
+  SwaggerModule.setup('api-docs', app, docuement);
 
   app.useLogger(app.get(WINSTON_MODULE_NEST_PROVIDER))
 
