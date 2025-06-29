@@ -35,8 +35,8 @@ export class CreateUserDto  {
   @IsString()
   firstName: string;
 
-  @ApiProperty()
-  @IsString()
+  @ApiProperty({required: false})
+  // @IsString()
   middleName?: string;
 
   @ApiProperty()
@@ -45,7 +45,7 @@ export class CreateUserDto  {
 
   @ApiProperty()
   @IsString()
-  gender: UserGender;
+  gender?: UserGender;
 
   // @ApiProperty()
   role: UserRole;

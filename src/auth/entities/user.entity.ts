@@ -29,19 +29,23 @@ export class User extends DbEntity implements IEntity {
   email: string
   @Column({ nullable: false })
   password?: string;
+  @Column({ type: 'varchar', nullable: true })
+  googleId?: string;
   @Column({ nullable: false })
   firstName: string;
   @Column({ nullable: true})
   middleName?: string;
   @Column({ nullable: false })
   lastName: string;
-  @Column({type: 'varchar', enum: UserRole, nullable: false})
+  @Column({ nullable: true })
+  profilePicture?: string;
+  @Column({type: 'varchar', enum: UserRole, nullable: false, default: UserRole.USER})
   role: UserRole;
   @Column({ default: false })
   isAdmin: boolean;
   @Column({ default: false })
   isVerified: boolean;
-  @Column({type: 'varchar', enum: UserGender, nullable: false})
+  @Column({type: 'varchar', enum: UserGender, nullable: true})
   gender: UserGender;
 
   // @OneToOne(() => Student, (student: Student) => student.user, { onDelete: 'CASCADE' })

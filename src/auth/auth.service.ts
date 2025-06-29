@@ -20,6 +20,7 @@ export class AuthService {
     console.log(user);
 
     if (!user) throw new UnauthorizedException("Invalid login credential");
+    if( !user.isVerified) throw new UnauthorizedException("Email is not verified");
     if (!(await this.hashPassword.comparePasswordAsync(loginAuthDto.password, user.password as string))) {
       throw new UnauthorizedException("Invalid login credential");
     }
