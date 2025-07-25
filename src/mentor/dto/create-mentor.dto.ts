@@ -1,8 +1,8 @@
-import { CreateUserDto } from '../../auth/dto/create-user.dto';
+import { CreateUserDto } from '../../user/dto/create-user.dto';
 import { Column } from 'typeorm';
 import { AvailabilityStatus } from '../abstraction/enum/availability-status.enum';
 import { ApiProperty } from '@nestjs/swagger';
-import { IsCurrency, IsEnum, IsString } from 'class-validator';
+import { IsArray, IsCurrency, IsEnum, IsOptional, IsString } from 'class-validator';
 
 export class CreateMentorDto extends CreateUserDto {
   @ApiProperty({ required: true })
@@ -26,5 +26,11 @@ export class CreateMentorDto extends CreateUserDto {
   @ApiProperty({ required: false })
   @IsString({ message: 'value must be a string' })
   location: string;
+  @ApiProperty({required: false, example:  [{ subjectId: '12345' }] })
+  @IsOptional()
+  @IsArray({message: 'competency subject must be an array'})
+  competencySubjects: [{ subjectId: string }];
+
+
   isVerified: boolean;
 }

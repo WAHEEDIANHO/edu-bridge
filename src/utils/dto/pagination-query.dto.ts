@@ -22,7 +22,7 @@ export class PaginationQueryDto<T extends IEntity> {
   @IsEnum(SortOrder)
   order?: SortOrder = SortOrder.DESC;
 
-  @ApiProperty({ required: false })
+  @ApiProperty({ required: false, type: "string" })
   @IsString()
   cursorField?: keyof T = 'id' as keyof T;  // default pagination field
 }

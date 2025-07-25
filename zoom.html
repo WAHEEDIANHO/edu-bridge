@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Testing Zoom SDK</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://source.zoom.us/3.1.0/lib/vendor/react.min.js"></script>
+    <script src="https://source.zoom.us/3.1.0/lib/vendor/react-dom.min.js"></script>
+    <script src="https://source.zoom.us/3.1.0/lib/vendor/redux.min.js"></script>
+    <script src="https://source.zoom.us/3.1.0/lib/vendor/redux-thunk.min.js"></script>
+    <script src="https://source.zoom.us/3.1.0/lib/vendor/lodash.min.js"></script>
+    <script src="https://source.zoom.us/zoom-meeting-3.1.0.min.js"></script>
+
+    <style>
+        #zmmtg-root {
+            height: 100vh;
+            width: 100%;
+            position: relative;
+            z-index: 999;
+        }
+    </style>
+</head>
+<body>
+<div id="zmmtg-root"></div>
+<div id="aria-notify-area"></div>
+
+<script>
+    ZoomMtg.setZoomJSLib('https://source.zoom.us/3.1.0/lib', '/av'); // Needed before preload
+    ZoomMtg.preLoadWasm();
+    ZoomMtg.prepareWebSDK();
+
+    const MEETING_NUMBER = "84539775647";
+    const SIGNATURE = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzZGtLZXkiOiJmM3VTVHY4VDd5SGlScll1M3A5WlEiLCJhcHBLZXkiOiJmM3VTVHY4VDd5SGlScll1M3A5WlEiLCJtbiI6IjgyODM1NDMyNjUwIiwicm9sZSI6MCwiaWF0IjoxNzUyOTU5NDM0LCJleHAiOjE3NTI5NjY2NjQsInRva2VuRXhwIjoxNzUyOTY2NjY0fQ.8QgvNmXzwMAASgwI-o6D80AXlAkFXRhX5K3E1O9rzrY"; // NEVER expose API Secret on frontend
+    const USER_NAME = "Safiu Waheed";
+    // const USER_EMAIL = "yourname@example.com";
+    // const PASSWORD = "yipA0q"; // optional if not required
+
+    ZoomMtg.init({
+        leaveUrl: "https://yourdomain.com/leave", // where to go after leaving
+        success: function () {
+            console.log("Init success", SIGNATURE);
+            ZoomMtg.join({
+                signature: SIGNATURE,
+                sdkKey: "f3uSTv8T7yHiRrYu3p9ZQ", // 🔴 REQUIRED
+                meetingNumber: MEETING_NUMBER,
+                userName: USER_NAME,
+                // userEmail: USER_EMAIL,
+                // passWord: PASSWORD, // optional, but you've included it — good
+                success: function (res) {
+                    console.log("Join meeting success", res);
+                },
+                error: function (err) {
+                    console.error("Join error", err); // Check console for details
+                }
+            });
+
+        },
+        error: function (err) {
+            console.error("Init error", err);
+        }
+    });
+</script>
+</body>
+</html>
