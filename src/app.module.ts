@@ -12,6 +12,19 @@ import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { EmailServiceModule } from './email-service/email-service.module';
 import { MenteeModule } from './mentee/mentee.module';
 import { MentorModule } from './mentor/mentor.module';
+import { PaymentModule } from './payment/payment.module';
+import { AdminModule } from './admin/admin.module';
+import { ConferenceModule } from './conference/conference.module';
+import { PerformanceModule } from './performance/performance.module';
+import { UserModule } from './user/user.module';
+import { BookingModule } from './booking/booking.module';
+import { AvailabilitySlotModule } from './availability-slot/availability-slot.module';
+import { RatingModule } from './rating/rating.module';
+import { SessionModule } from './session/session.module';
+import { ActivityModule } from './activity/activity.module';
+import { CqrsModule } from '@nestjs/cqrs';
+import { DataSource } from 'typeorm';
+import { BookingSubscriber } from './booking/subscribers/booking.subscriber';
 
 @Module({
   imports: [
@@ -45,6 +58,7 @@ import { MentorModule } from './mentor/mentor.module';
         logging: false,
         // migrations: [__dirname + '/migrations/**/*{.ts,.js}'],
         entities: [__dirname + '/**/*.entity{.ts,.js}'],
+        subscribers: [__dirname + '/**/*.subscriber{.ts,.js}'],
         extra: {
           trustServerCertificate: true, // Required for self-signed certs
         },
@@ -63,9 +77,30 @@ import { MentorModule } from './mentor/mentor.module';
     }),
     EmailServiceModule,
     MenteeModule,
-    MentorModule
+    MentorModule,
+    PaymentModule,
+    AdminModule,
+    ConferenceModule,
+    PerformanceModule,
+    UserModule,
+    BookingModule,
+    AvailabilitySlotModule,
+    RatingModule,
+    SessionModule,
+    ActivityModule,
+    CqrsModule.forRoot()
   ],
   controllers: [],
-  providers: [{provide: APP_GUARD, useClass: ThrottlerGuard}],
+  providers: [{provide: APP_GUARD, useClass: ThrottlerGuard}, BookingSubscriber],
 })
-export class AppModule {}
+export class AppModule {
+
+  constructor(
+    private dataSource: DataSource,
+    private bookingSubscriber:  BookingSubscriber,
+  )
+  {
+    this.dataSource.subscribers.push(this.bookingSubscriber);
+  }
+
+}

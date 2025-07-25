@@ -1,10 +1,13 @@
-import { Column, Entity, JoinColumn, OneToMany, OneToOne } from 'typeorm';
-import { User } from '../../auth/entities/user.entity';
+import { Column, Entity, JoinColumn, OneToMany, OneToOne, Unique } from 'typeorm';
+import { User } from '../../user/entities/user.entity';
 import { DbEntity } from '../../utils/abstract/database/db-entity';
 import { IEntity } from '../../utils/abstract/database/i-enity';
 import { Rate } from './rate.entity';
 import { AvailabilityStatus } from '../abstraction/enum/availability-status.enum';
+import { CompetencySubject } from './competency-subject.entity';
+import { AvailabilitySlot } from '../../availability-slot/entities/availability-slot.entity';
 
+@Unique(['user'])
 @Entity("tbl_mentors")
 export class Mentor extends DbEntity implements IEntity {
 
@@ -34,10 +37,17 @@ export class Mentor extends DbEntity implements IEntity {
 
 
   //relationships
-  @OneToOne(() => User)
+  @OneToOne(() => User, () => null, { onDelete: 'CASCADE' })
   @JoinColumn()
   user: User;
 
   @OneToMany(() => Rate, (rate: Rate) => rate.mentor)
   rates?: Rate[];
+
+
+  @OneToMany(() => CompetencySubject, (competencySubject: CompetencySubject) => competencySubject.mentor, { cascade: true })
+  competencySubjects?: CompetencySubject[];
+
+  @OneToMany(() => AvailabilitySlot, (slot: AvailabilitySlot) => slot.mentor, { cascade: true })
+  mySlots?: AvailabilitySlot[];
 }

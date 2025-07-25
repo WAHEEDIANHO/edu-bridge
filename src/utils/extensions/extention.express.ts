@@ -1,5 +1,7 @@
 import { ResponseFormat } from '../response-formatter.middleware';
+interface User {
 
+}
 declare global {
   namespace Express {
     interface Response {
@@ -9,5 +11,13 @@ declare global {
   }
 }
 
+
+// declare global {
+//   namespace Express {
+//     interface Request {
+//       user?: User
+//     }
+//   }
+// }
 
 export  {}

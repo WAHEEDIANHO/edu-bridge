@@ -58,8 +58,8 @@ export class User extends DbEntity implements IEntity {
 
   toJSON() {
     delete this.password;
-    delete this.createdAt;
-    delete this.updatedAt;
+    // delete this.createdAt;
+    // delete this.updatedAt;
     return this;
   }
 }

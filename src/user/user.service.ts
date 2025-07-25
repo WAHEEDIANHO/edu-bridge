@@ -7,6 +7,7 @@ import bcrypt from 'bcryptjs';
 import { HashPassword } from '../utils/hash-password';
 import { JwtService } from '@nestjs/jwt';
 import { EmailServiceService } from '../email-service/email-service.service';
+import { ConfigService } from '@nestjs/config';
 // import { ensureEntityExists } from '../utils/entity-exists';
 
 @Injectable()
@@ -15,7 +16,8 @@ export class UserService {
     @InjectRepository(User) private userModel: Repository<any>,
     private hashPassword: HashPassword,
     private jwtService: JwtService,
-    private emailService: EmailServiceService
+    private emailService: EmailServiceService,
+    private configService: ConfigService,
 ) {}
 
   async findByUsername(email: string): Promise<User> {
@@ -47,15 +49,31 @@ export class UserService {
       newUser.password = await this.hashPassword.hashPasswordAsync(createUserDto.password);
       user = await this.userModel.save(newUser);
 
-      const token = this.jwtService.sign({ id: user.id, email: user.email });
-      await this.emailService.sendVerificationMail({
-        verificationUrl: "http://localhost:3000/auth/verify-email/" + token,
-        email: user.email,
-        name: `${user.firstName} ${user.lastName}`,
-      })
+      this.sendVerificationMail(user);
+
+      // const token = this.jwtService.sign({ id: user.id, email: user.email }, {expiresIn: "2 days"});
+      // await this.emailService.sendVerificationMail({
+      //   verificationUrl: "http://localhost:3000/auth/verify-email/" + token,
+      //   email: user.email,
+      //   name: `${user.firstName} ${user.lastName}`,
+      // })
     }
 
     return user
+  }
+
+  async sendVerificationMail(user: User): Promise<void> {
+    if (!user || !user.email) {
+      throw new UnprocessableEntityException("User data is required");
+    }
+
+    const token = this.jwtService.sign({ id: user.id, email: user.email }, { expiresIn: "2 days", secret: this.configService.get('SECRET_KEY') });
+    await this.emailService.sendVerificationMail({
+      verificationUrl: "http://localhost:3000/auth/verify-email/" + token,
+      email: user.email,
+      name: `${user.firstName} ${user.lastName}`,
+    });
+    console.log("mail sent")
   }
 
   async verifyUser(token: string): Promise<void>{
@@ -64,5 +82,19 @@ export class UserService {
     user.isVerified = true;
     await this.userModel.save(user);
     // console.log(val)
+  }
+
+  async saveUserAsync(user: User): Promise<User> {
+    if (!user) throw new UnprocessableEntityException("User data is required");
+    return await this.userModel.save(user);
+  }
+
+  async changePassword(user: User, newPassword: string) {
+
+    if (!user) throw new UnprocessableEntityException("User data is required");
+    if (!newPassword) throw new UnprocessableEntityException("New password is required");
+
+    user.password = await this.hashPassword.hashPasswordAsync(newPassword);
+    return await this.userModel.save(user);
   }
 }
