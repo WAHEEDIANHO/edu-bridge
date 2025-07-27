@@ -27,7 +27,7 @@ export class BookingSubscriber implements EntitySubscriberInterface<Booking>
         })
 
       if(!slotReEpo) return;
-      if(slotReEpo.bookings.length == slotReEpo.no_of_participant_allow){
+      // if(slotReEpo.bookings.length == slotReEpo.no_of_participant_allow){
         // slotReEpo.is_open_for_booking = false;
         // await event.manager.getRepository(AvailabilitySlot).save(slotReEpo);
 
@@ -35,7 +35,7 @@ export class BookingSubscriber implements EntitySubscriberInterface<Booking>
         this.eventBus.publish(new BookingEvent(slotReEpo, booking));
 
         // console.log("event published")
-      }
+      // }
     }
 
   }

@@ -10,8 +10,15 @@ import { Repository } from 'typeorm';
 @Injectable()
 export class AvailabilitySlotService extends GeneralService<AvailabilitySlot> implements IAvailabilitySlotService {
   public constructor(
-    @InjectRepository(AvailabilitySlot) repo: Repository<AvailabilitySlot>,
+    @InjectRepository(AvailabilitySlot) private readonly repo: Repository<AvailabilitySlot>,
   ) {
     super(repo);
+  }
+
+  async findOne({ id }: { id: string }): Promise<AvailabilitySlot | null> {
+    return await this.repo.findOne({
+      where: { id,  },
+      relations: ['mentor', 'bookings'],
+    });
   }
 }

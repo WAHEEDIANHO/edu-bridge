@@ -3,6 +3,12 @@ import { ApiProperty } from '@nestjs/swagger';
 import { DayOfWeek } from '../abstraction/enums/day-of-week.enum';
 import { MenteeLevel } from '../../mentee/abstraction/enums/mentee-level.enum';
 
+export interface ICreateAvailabilitySlotDto {
+  day: DayOfWeek; // Day of the week
+  startTime: string; // Start time in HH format
+  endTime: string; // End time in MM format
+}
+
 export class CreateAvailabilitySlotDto {
   // @ApiProperty()
   // @IsUUID()
@@ -12,9 +18,6 @@ export class CreateAvailabilitySlotDto {
   @IsEnum(DayOfWeek)
   day: string; //
 
-  @ApiProperty({ enum: MenteeLevel })
-  @IsEnum(MenteeLevel)
-  studentLevel: string;
 
   @ApiProperty()
   @IsString()
@@ -23,9 +26,5 @@ export class CreateAvailabilitySlotDto {
   @ApiProperty()
   @IsString()
   endTime: string; // MM
-
-  @ApiProperty({ type: 'integer' })
-  @IsNumber()
-  participantAllow: number;
 
 }

@@ -1,5 +1,5 @@
 import { ApiProperty, ApiTags, PartialType } from '@nestjs/swagger';
-import { IsEmail, IsString, Matches } from 'class-validator';
+import { IsEmail, IsEnum, IsOptional, IsString, Matches } from 'class-validator';
 import { UserGender, UserRole } from '../entities/user.entity';
 
 export class CreateUserDto  {
@@ -44,8 +44,13 @@ export class CreateUserDto  {
   lastName: string;
 
   @ApiProperty()
-  @IsString()
+  @IsEnum(["male", "female"], { message: "value must be male or female"})
   gender?: UserGender;
+
+  @ApiProperty({ required: false })
+  @IsString()
+  @IsOptional()
+  profilePicture?: string
 
   // @ApiProperty()
   role: UserRole;

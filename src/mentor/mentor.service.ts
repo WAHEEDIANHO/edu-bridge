@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, UnprocessableEntityException } from '@nestjs/common';
 import { CreateMentorDto } from './dto/create-mentor.dto';
 import { UpdateMentorDto } from './dto/update-mentor.dto';
 import { ApiTags } from '@nestjs/swagger';
@@ -7,7 +7,7 @@ import { GeneralService } from '../utils/abstract/service/general.service';
 import { Mentor } from './entities/mentor.entity';
 import { IMentorService } from './abstraction/service/i-mentor.service';
 import { InjectRepository } from '@nestjs/typeorm';
-import { In, Repository } from 'typeorm';
+import { In, MoreThanOrEqual, Repository } from 'typeorm';
 import { AvailabilitySlot } from '../availability-slot/entities/availability-slot.entity';
 import { AvailabilitySlotService } from '../availability-slot/availability-slot.service';
 import { PaginationQueryDto } from '../utils/dto/pagination-query.dto';
@@ -16,6 +16,10 @@ import { BookingService } from '../booking/booking.service';
 import { Booking } from '../booking/entities/booking.entity';
 import { DayOfWeek } from '../availability-slot/abstraction/enums/day-of-week.enum';
 import { MentorQueryDto } from './dto/mentor-query-dto';
+import { CompetencySubject } from './entities/competency-subject.entity';
+import { User } from '../user/entities/user.entity';
+import { Session } from '../session/entities/session.entity';
+import { SessionService } from '../session/session.service';
 
 @Injectable()
 export class MentorService
@@ -24,8 +28,10 @@ export class MentorService
 {
   constructor(
     @InjectRepository(Mentor) private readonly repo: Repository<Mentor>,
+    // @InjectRepository(CompetencySubject)
     private readonly availabilitySlotService: AvailabilitySlotService,
     private readonly bookingService: BookingService,
+    private readonly sessionService: SessionService
   ) {
     super(repo);
   }
@@ -43,97 +49,128 @@ export class MentorService
   }
 
   async geyMyStudent(teacherId: string): Promise<any> {
-
-    const slots = await this.availabilitySlotService.findAll({ mentor: { id: teacherId } } as PaginationQueryDto<AvailabilitySlot>, ['bookings']);
+    const slots = await this.availabilitySlotService.findAll(
+      { mentor: { id: teacherId } } as PaginationQueryDto<AvailabilitySlot>,
+      ['bookings'],
+    );
 
     const { data }: any = slots || {};
     const bookings = data?.map((slot) => slot.bookings).flat() || [];
 
     let students: any[] = [];
     for (const slot of bookings) {
-      const obx: any = await this.bookingService.findById(slot.id, ['mentee', 'mentee.user', 'mentee.preferredSubjects']);
+      const obx: any = await this.bookingService.findById(slot.id, [
+        'mentee',
+        'mentee.user',
+        'mentee.preferredSubjects',
+      ]);
       students.push(obx.mentee);
     }
 
-    return  Array.from(new Map(students.map((item) => [item.id, item])).values());
-
+    return Array.from(
+      new Map(students.map((item) => [item.id, item])).values(),
+    );
   }
 
-  async getUpcomingSession(query: PaginationQueryDto<Booking>, id: string): Promise<any> {
-
+  async getUpcomingSession(
+    query: PaginationQueryDto<Booking>,
+    id: string,
+  ): Promise<any> {
     const allDays = Object.values(DayOfWeek);
     const todayIndex = new Date().getDay();
-    const remainingDays= allDays.slice(todayIndex);
+    const remainingDays = allDays.slice(todayIndex);
     // Object.values(DayOfWeek)[new Date().getDay()]
 
-    const slots =
-      await this.availabilitySlotService
-        .findAll({ ...query, day: `in:${JSON.stringify(remainingDays)}`, mentor: { id: id }, is_open_for_booking: false  } as PaginationQueryDto<AvailabilitySlot>, ['mentor',  'bookings']);
-    const { data }: any = slots || {};
+    const today = new Date();
+    today.setHours(0,0,0,0);
 
-    const bookings = data?.map((slot) => slot.bookings).flat() || [];
+    // const slots = await this.availabilitySlotService.findAll(
+    //   {
+    //     ...query,
+    //     day: `in:${JSON.stringify(remainingDays)}`,
+    //     mentor: { id: id },
+    //     is_open_for_booking: false,
+    //   } as PaginationQueryDto<AvailabilitySlot>,
+    //   ['mentor', 'bookings'],
+    // );
+    // const { data }: any = slots || {};
+    //
+    // const bookings = data?.map((slot) => slot.bookings).flat() || [];
+    //
+    // let bookingWithScheduleStudent: any[] = [];
+    // for (const slot of bookings) {
+    //   const obx: any = await this.bookingService.findById(slot.id, [
+    //     'mentee',
+    //     'mentee.user',
+    //     'mentee.preferredSubjects',
+    //     'slot.session',
+    //   ]);
+    //   bookingWithScheduleStudent.push(obx);
+    // }
+    const sessions = await this.sessionService.findAll({ ...query, session_date: `>=${today.toISOString().split('T')[0]}`, mentor: { id : id }  } as PaginationQueryDto<Session>, ['mentor', 'mentee', "booking"]);
 
-    let bookingWithScheduleStudent: any[] = [];
-    for (const slot of bookings) {
-      const obx: any = await this.bookingService.findById(slot.id, ['mentee', 'mentee.user', 'mentee.preferredSubjects', 'slot.session']);
-      bookingWithScheduleStudent.push(obx);
-    }
-
-    return bookingWithScheduleStudent;
+    return sessions;
     // return  Array.from(new Map(bookingWithScheduleStudent.map((item) => [item.id, item])).values());
-
   }
 
-  async getAvailableMentors(query: MentorQueryDto)
-  {
-    const slots =
-      await this.availabilitySlotService
-        .findAll({ ...query, is_open_for_booking: true  } as PaginationQueryDto<AvailabilitySlot>, ['mentor']);
+  async getAvailableMentors(query: MentorQueryDto) {
+    const slots = await this.availabilitySlotService.findAll(
+      {
+        ...query,
+        is_open_for_booking: true,
+      } as PaginationQueryDto<AvailabilitySlot>,
+      ['mentor'],
+    );
     const { data }: any = slots || {};
 
     let mentors: any[] = [];
     for (const slot of data) {
-      const obx: any = await this.repo.findOne({ where: { id: slot.mentor.id }, relations: ['user', 'competencySubjects'] }); //(slot.id, ['mentee', 'mentee.user', 'mentee.preferredSubjects', 'session']);
+      const obx: any = await this.repo.findOne({
+        where: { id: slot.mentor.id },
+        relations: ['user', 'competencySubjects'],
+      }); //(slot.id, ['mentee', 'mentee.user', 'mentee.preferredSubjects', 'session']);
       // const mentor = obx.mentor;
       delete slot.mentor;
       const user = this.flattenObject(obx);
-        mentors.push({
-          slot,
-          user
-        });
+      mentors.push({
+        slot,
+        user,
+      });
     }
     mentors = this.groupByUser(mentors);
     return mentors;
   }
 
+  private flattenObject(obj, parent = '', res = {}) {
+    for (let key in obj) {
+      if (!obj.hasOwnProperty(key)) continue;
 
-    private flattenObject(obj, parent = '', res = {}) {
-      for (let key in obj) {
-        if (!obj.hasOwnProperty(key)) continue;
+      const propName = key; //parent ? `${parent}_${key}` : key;
 
-        const propName = key; //parent ? `${parent}_${key}` : key;
-
-        if (typeof obj[key] === 'object' && obj[key] !== null && !Array.isArray(obj[key])) {
-          this.flattenObject(obj[key], propName, res);
-        } else {
-          res[propName] = obj[key];
-        }
+      if (
+        typeof obj[key] === 'object' &&
+        obj[key] !== null &&
+        !Array.isArray(obj[key])
+      ) {
+        this.flattenObject(obj[key], propName, res);
+      } else {
+        res[propName] = obj[key];
       }
-      return res;
+    }
+    return res;
   }
 
-
   private groupByUser(data) {
-  const map = new Map();
+    const map = new Map();
 
-  for (const item of data) {
+    for (const item of data) {
       const userId = item.user.id;
 
       if (!map.has(userId)) {
         // Clone user and create slots array
         map.set(userId, {
           ...item.user,
-          slots: [item.slot]
+          slots: [item.slot],
         });
       } else {
         // Add slot to existing user group
@@ -144,4 +181,9 @@ export class MentorService
     return Array.from(map.values());
   }
 
+
+  async saveAsync(mentor: Mentor): Promise<void> {
+    if (!mentor) throw new UnprocessableEntityException("User data is required");
+    await this.repo.save(mentor);
+  }
 }

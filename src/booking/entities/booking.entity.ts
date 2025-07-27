@@ -8,6 +8,7 @@ import { AvailabilitySlot } from '../../availability-slot/entities/availability-
 import { DbEntity } from '../../utils/abstract/database/db-entity';
 import { IEntity } from '../../utils/abstract/database/i-enity';
 import { Session } from '../../session/entities/session.entity';
+import { Subject } from '../../admin/modules/subject/entities/subject.entity';
 
 @Entity('tbl_bookings')
 @Unique(["mentee", "mentor", "slot"])
@@ -28,13 +29,20 @@ export class Booking extends DbEntity implements IEntity {
   @Column({ type: 'text', nullable: true })
   note?: string;
 
-  @Column({ type: 'boolean', default: false })
-  recurrent?: boolean;
+  @Column({ type: 'date' })
+  prefer_date: Date;
+
+  @Column({ type: 'time' })
+  prefer_time: string; // e.g., '14:00:00'
+
+  @Column({ type: 'int' })
+  duration: number; // Duration in minutes
+
+  @ManyToOne(() => Subject, { eager: true })
+  subject: Subject;
 
   // @OneToOne(() => Session, { cascade: true})
   // @JoinColumn()
   // session: Session;
 
-  @Column({ type: "int", nullable: false, })
-  hours_booked: number
 }

@@ -18,15 +18,17 @@ import { Booking } from '../booking/entities/booking.entity';
 import { AvailabilitySlot } from '../availability-slot/entities/availability-slot.entity';
 import { Subject } from '../admin/modules/subject/entities/subject.entity';
 import { Session } from '../session/entities/session.entity';
+import { SessionModule } from '../session/session.module';
+import { RatingModule } from '../rating/rating.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([User, Mentee, MenteeSubject, Booking, AvailabilitySlot, MenteeSubject, Subject, Session]), AuthModule, JwtModule.registerAsync({
+  imports: [TypeOrmModule.forFeature([User, Mentee, MenteeSubject, Booking, AvailabilitySlot, MenteeSubject, MenteeSubject, Subject, Session]), AuthModule, JwtModule.registerAsync({
     imports: [ConfigModule],
     inject: [ConfigService],
     useFactory: async (configService: ConfigService) => ({
       secret: configService.get('SECRET_KEY'),
     }),
-  }),ConfigModule, BookingModule, AvailabilitySlotModule],
+  }),ConfigModule, BookingModule, AvailabilitySlotModule, SessionModule, RatingModule],
   controllers: [MenteeController],
   providers: [MenteeService, UserService, HashPassword, EmailServiceService, ExtractToken],
 })
