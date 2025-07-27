@@ -70,7 +70,7 @@ export class UserService {
 
     const token = this.jwtService.sign({ id: user.id, email: user.email }, { expiresIn: "2 days", secret: this.configService.get('SECRET_KEY') });
     await this.emailService.sendVerificationMail({
-      verificationUrl: "http://localhost:3000/auth/verify-email/" + token,
+      verificationUrl: `${this.configService.get("BACKEND_BASE_URL")}/auth/verify-email/` + token,
       email: user.email,
       name: `${user.firstName} ${user.lastName}`,
     });

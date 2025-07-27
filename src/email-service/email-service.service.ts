@@ -34,11 +34,11 @@ export class EmailServiceService {
 
     try {
        await axios.post(this.API_URL, emailData, {
-        headers: {
-          'Content-Type': 'application/json',
-          'Origin': "http://localhost:3000",// this.configService.get<string>('EMAIL_SERVICE_ORIGIN'),
-          'User-Agent': 'EmailJS/1.0'
-        }
+         headers: {
+           'Content-Type': 'application/json',
+           Origin: `${this.configService.get("BACKEND_BASE_URL")}`, // this.configService.get<string>('EMAIL_SERVICE_ORIGIN'),
+           'User-Agent': 'EmailJS/1.0',
+         },
        });
 
     } catch (error) {
@@ -64,9 +64,9 @@ export class EmailServiceService {
       await axios.post(this.API_URL, emailData, {
         headers: {
           'Content-Type': 'application/json',
-          'Origin': "http://localhost:3000",// this.configService.get<string>('EMAIL_SERVICE_ORIGIN'),
-          'User-Agent': 'EmailJS/1.0'
-        }
+          Origin: `${this.configService.get("BACKEND_BASE_URL")}`, // this.configService.get<string>('EMAIL_SERVICE_ORIGIN'),
+          'User-Agent': 'EmailJS/1.0',
+        },
       });
 
     } catch (error) {
