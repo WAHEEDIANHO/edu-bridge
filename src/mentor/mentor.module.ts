@@ -8,7 +8,6 @@ import { User } from '../user/entities/user.entity';
 import { JwtModule, JwtService } from '@nestjs/jwt';
 import { HashPassword } from '../utils/hash-password';
 import { Mentor } from './entities/mentor.entity';
-import { Rate } from './entities/rate.entity';
 import { EmailServiceService } from '../email-service/email-service.service';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { ExtractToken } from '../utils/extract-token';
@@ -18,15 +17,18 @@ import { AvailabilitySlot } from '../availability-slot/entities/availability-slo
 import { AvailabilitySlotService } from '../availability-slot/availability-slot.service';
 import { BookingModule } from '../booking/booking.module';
 import { ConferenceModule } from '../conference/conference.module';
+import { CompetencySubject } from './entities/competency-subject.entity';
+import { SessionModule } from '../session/session.module';
+import { RatingModule } from '../rating/rating.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([User, Mentor]), AuthModule, JwtModule.registerAsync({
+  imports: [TypeOrmModule.forFeature([User, Mentor, CompetencySubject, AvailabilitySlot]), AuthModule, JwtModule.registerAsync({
     imports: [ConfigModule],
     inject: [ConfigService],
     useFactory: async (configService: ConfigService) => ({
       secret: configService.get('SECRET_KEY'),
     }),
-  }),ConfigModule, AvailabilitySlotModule, BookingModule],
+  }),ConfigModule, AvailabilitySlotModule, BookingModule, SessionModule, RatingModule],
   controllers: [MentorController],
   providers: [MentorService, UserService, HashPassword, EmailServiceService, ConfigService, ExtractToken],
   exports: [MentorService]

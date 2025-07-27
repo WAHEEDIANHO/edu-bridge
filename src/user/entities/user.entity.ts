@@ -38,7 +38,6 @@ export class User extends DbEntity implements IEntity {
   @Column({ nullable: false })
   lastName: string;
   @Column({ nullable: true })
-  profilePicture?: string;
   @Column({type: 'varchar', enum: UserRole, nullable: false, default: UserRole.USER})
   role: UserRole;
   @Column({ default: false })
@@ -47,6 +46,8 @@ export class User extends DbEntity implements IEntity {
   isVerified: boolean;
   @Column({type: 'varchar', enum: UserGender, nullable: true})
   gender: UserGender;
+  @Column({ nullable: true})
+  imageUrl?: string;
 
   // @OneToOne(() => Student, (student: Student) => student.user, { onDelete: 'CASCADE' })
   // student?: Student;

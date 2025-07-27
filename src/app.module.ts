@@ -25,6 +25,7 @@ import { ActivityModule } from './activity/activity.module';
 import { CqrsModule } from '@nestjs/cqrs';
 import { DataSource } from 'typeorm';
 import { BookingSubscriber } from './booking/subscribers/booking.subscriber';
+import { FileUploadModule } from './file-upload/file-upload.module';
 
 @Module({
   imports: [
@@ -88,19 +89,20 @@ import { BookingSubscriber } from './booking/subscribers/booking.subscriber';
     RatingModule,
     SessionModule,
     ActivityModule,
-    CqrsModule.forRoot()
+    CqrsModule.forRoot(),
+    FileUploadModule
   ],
   controllers: [],
   providers: [{provide: APP_GUARD, useClass: ThrottlerGuard}, BookingSubscriber],
 })
 export class AppModule {
 
-  constructor(
-    private dataSource: DataSource,
-    private bookingSubscriber:  BookingSubscriber,
-  )
-  {
-    this.dataSource.subscribers.push(this.bookingSubscriber);
-  }
+  // constructor(
+  //   private dataSource: DataSource,
+  //   private bookingSubscriber:  BookingSubscriber,
+  // )
+  // {
+  //   this.dataSource.subscribers.push(this.bookingSubscriber);
+  // }
 
 }

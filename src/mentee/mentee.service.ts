@@ -6,7 +6,7 @@ import { GeneralService } from '../utils/abstract/service/general.service';
 import { Mentee } from './entities/mentee.entity';
 import { IMenteeService } from './abstraction/service/i-mentee.service';
 import { InjectRepository } from '@nestjs/typeorm';
-import { In, Repository } from 'typeorm';
+import { In, MoreThanOrEqual, Repository } from 'typeorm';
 import { Mentor } from '../mentor/entities/mentor.entity';
 import { PaginationQueryDto } from '../utils/dto/pagination-query.dto';
 import { Booking } from '../booking/entities/booking.entity';
@@ -14,6 +14,8 @@ import { DayOfWeek } from '../availability-slot/abstraction/enums/day-of-week.en
 import { AvailabilitySlot } from '../availability-slot/entities/availability-slot.entity';
 import { BookingService } from '../booking/booking.service';
 import { AvailabilitySlotService } from '../availability-slot/availability-slot.service';
+import { SessionService } from '../session/session.service';
+import { Session } from '../session/entities/session.entity';
 
 @Injectable()
 export class MenteeService extends GeneralService<Mentee> implements IMenteeService {
@@ -22,7 +24,8 @@ export class MenteeService extends GeneralService<Mentee> implements IMenteeServ
     @InjectRepository(Mentee) private readonly repo: Repository<Mentee>,
     @Inject(UserService) private readonly userService: UserService,
     @Inject(BookingService) private readonly bookingService: BookingService,
-    @Inject(AvailabilitySlotService) private readonly availabilitySlotService: AvailabilitySlotService // Assuming this is injected correctly, replace with actual service if needed
+    @Inject(AvailabilitySlotService) private readonly availabilitySlotService: AvailabilitySlotService, // Assuming this is injected correctly, replace with actual service if needed
+    @Inject(SessionService) private readonly sessionService: SessionService
   ) {
     super(repo);
   }
@@ -36,21 +39,26 @@ export class MenteeService extends GeneralService<Mentee> implements IMenteeServ
     const allDays = Object.values(DayOfWeek);
     const todayIndex = new Date().getDay();
     const remainingDays = allDays.slice(todayIndex);
+    const today = new Date();
+    today.setHours(0,0,0,0);
 
-    const slots = await this.availabilitySlotService.findAll({ ...query, day: `in:${JSON.stringify(remainingDays)}`, is_open_for_booking: false  } as PaginationQueryDto<AvailabilitySlot>, ['mentor', 'bookings', "session"]);
+    const sessions = await this.sessionService.findAll({ ...query, session_date: `>=${today.toISOString().split('T')[0]}`, mentee: { id : id }  } as PaginationQueryDto<Session>, ['mentor', 'mentee', "booking"]);
 
-    const { data }: any = slots || {};
-    let bookings = data?.map((slot) => slot.bookings).flat() || [];
+    // const { data }: any = sessions || {};
+    // let bookings = data?.map((session: Session) => ({
+    //   ...session,
+    //   tutorName: session.mentor.user.
+    // }));
+    //
+    // let bookingWithScheduleStudent: any[] = [];
+    // for (const booking of bookings) {
+    //
+    //   const obx: any = await this.bookingService.findById(booking.id, ['mentee.user', 'mentee.preferredSubjects', 'mentor.user',  'mentee.preferredSubjects', 'slot.session']);
+    //   console.log("obx", obx.mentee, id);
+    //   if(obx.mentee.id == id) bookingWithScheduleStudent.push(obx);
+    // }
 
-    let bookingWithScheduleStudent: any[] = [];
-    for (const booking of bookings) {
-
-      const obx: any = await this.bookingService.findById(booking.id, ['mentee.user', 'mentee.preferredSubjects', 'mentor.user',  'mentee.preferredSubjects', 'slot.session']);
-      console.log("obx", obx.mentee, id);
-      if(obx.mentee.id == id) bookingWithScheduleStudent.push(obx);
-    }
-
-    return bookingWithScheduleStudent;
+    return sessions;
   }
 
   async getMyTutor(query: PaginationQueryDto<any>, id: string) {

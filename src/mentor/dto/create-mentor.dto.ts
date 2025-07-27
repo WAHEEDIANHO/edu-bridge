@@ -31,6 +31,12 @@ export class CreateMentorDto extends CreateUserDto {
   @IsArray({message: 'competency subject must be an array'})
   competencySubjects: [{ subjectId: string }];
 
+  @ApiProperty({required: false, example:  [{ day: 'Sunday', startTime: "09:00", endTime: "18:00" }] })
+  @IsOptional()
+  @IsArray({message: 'competency subject must be an array'})
+  slots: [{ day: string, startTime: string, endTime: string }];
+
+
 
   isVerified: boolean;
 }

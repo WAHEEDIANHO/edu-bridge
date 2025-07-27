@@ -10,7 +10,7 @@ import {
   HttpStatus,
   UseGuards,
   Req,
-  Query,
+  Query, Put,
 } from '@nestjs/common';
 import { MenteeService } from './mentee.service';
 import { CreateMenteeDto } from './dto/create-mentee.dto';
@@ -29,6 +29,16 @@ import { PreferSubjectDto } from './dto/prefer-subject-dto';
 import { MenteeSubject } from './entities/mentee_subject.entity';
 import { Booking } from '../booking/entities/booking.entity';
 import { Mentor } from '../mentor/entities/mentor.entity';
+import { UpdateMentorDto } from '../mentor/dto/update-mentor.dto';
+import { UpdateUserDto } from '../user/dto/update-user.dto';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { RatingService } from '../rating/rating.service';
+import { Rating } from '../rating/entities/rating.entity';
+import { CreateRatingDto } from '../rating/dto/create-rating.dto';
+import { SessionService } from '../session/session.service';
+import { session } from 'passport';
+import { Session } from '../session/entities/session.entity';
 
 @Controller('mentee')
 @ApiTags("Mentee")
@@ -36,6 +46,9 @@ export class MenteeController {
   constructor(
     private readonly menteeService: MenteeService,
     private readonly userService: UserService,
+    private readonly ratingService: RatingService,
+    private readonly sessionService: SessionService,
+    @InjectRepository(MenteeSubject) private readonly menteeSubjectRepo: Repository<MenteeSubject>,
     ) {}
 
   @Post("register")
@@ -73,6 +86,48 @@ export class MenteeController {
     return res.status(HttpStatus.CREATED).json(res.formatResponse(HttpStatus.CREATED, "Mentee created successfully", {}));
   }
 
+  @Put("update-profile")
+  @ApiBearerAuth()
+  @UseGuards(AuthGuard, RoleGuard)
+  @Roles(UserRole.Student)
+  async update(@Req() req: Request, @Body(new ValidationPipe()) updateMenteeDto: UpdateMenteeDto, @Res() res: Response): Promise<Response> {
+    const { username, sub } = req.user as any;
+    let user = await this.userService.findByUsername(username);
+    const mentee = await this.menteeService.findByUserId(sub);
+    if (user == null || mentee == null) return res.status(HttpStatus.NOT_FOUND).json(res.formatResponse(HttpStatus.NOT_FOUND, "User not found", {}));
+
+    delete updateMenteeDto?.email;
+    delete updateMenteeDto?.role;
+    delete updateMenteeDto?.gender;
+
+    await this.userService.update(user.id, updateMenteeDto as UpdateUserDto);
+
+    // if (updateMenteeDto?.preferredSubjects?.length != null) updateMenteeDto.preferredSubjects.forEach((ps: any) => ps.menteeId = mentee.id);
+
+    // updating competency subjects if set
+    if(updateMenteeDto?.preferredSubjects?.length != null) {
+      await this.menteeSubjectRepo.delete({ menteeId: mentee.id });
+
+      const newSubjects = updateMenteeDto.preferredSubjects.map(cs => {
+        const subject = new MenteeSubject();
+        subject.subjectId = cs.subjectId.toUpperCase();
+        subject.menteeId = mentee.id;
+        subject.mentee = mentee;
+        return subject;
+      });
+
+      // 3. Save all at once
+      await this.menteeSubjectRepo.save(newSubjects);
+
+      delete updateMenteeDto.preferredSubjects;
+    }
+
+
+    Object.assign(mentee, updateMenteeDto);
+    await this.menteeService.update(mentee);
+    return res.status(HttpStatus.OK).json(res.formatResponse(HttpStatus.OK, "Mentee updated successfully", {}));
+  }
+
   // @Get()
   // findAll() {
   //   return this.menteeService.findAll();
@@ -107,15 +162,15 @@ export class MenteeController {
   @ApiBearerAuth()
   @UseGuards(AuthGuard, RoleGuard)
   @Roles(UserRole.Student, UserRole.ADMIN)
-  @Get("upcoming-schedule")
+  @Get("upcoming-sessions")
   async getDailySchedule(@Req() req: Request, @Query() query: PaginationQueryDto<Booking>, @Res() res: Response): Promise<Response> {
     const { sub } = req.user as any;
-    const mentor = await this.menteeService.findByUserId(sub);
-    if (!mentor) {
+    const mentee = await this.menteeService.findByUserId(sub);
+    if (!mentee) {
       return  res.status(HttpStatus.OK).json(res.formatResponse(HttpStatus.NOT_FOUND, "you are not a mentor"));
     }
 
-    const schedules = await this.menteeService.upComingSchedule(query, mentor.id) //await this.availabilityService.findAll({ ...query, day: Object.values(DayOfWeek)[new Date().getDay()], mentor: { id: mentor?.id }  } as PaginationQueryDto<AvailabilitySlot>, ['mentor', 'bookings']);
+    const schedules = await this.menteeService.upComingSchedule(query, mentee.id) //await this.availabilityService.findAll({ ...query, day: Object.values(DayOfWeek)[new Date().getDay()], mentor: { id: mentor?.id }  } as PaginationQueryDto<AvailabilitySlot>, ['mentor', 'bookings']);
 
     console.log(schedules, "=========================");
     return res.status(HttpStatus.OK).json(res.formatResponse(HttpStatus.OK, "booking retrieved successfully", schedules));
@@ -135,6 +190,66 @@ export class MenteeController {
 
     const result = await this.menteeService.getMyTutor(query, mentee.id);
     return res.status(HttpStatus.OK).json(res.formatResponse(HttpStatus.OK, "tutor retrieved successfully", result));
+  }
+
+  @ApiBearerAuth()
+  @UseGuards(AuthGuard, RoleGuard)
+  @Roles(UserRole.Student, UserRole.ADMIN)
+  @Post("rate-tutor-performance")
+  async rateTutor(@Req() req: Request, @Body(new ValidationPipe()) createRatingDto: CreateRatingDto, @Res() res: Response): Promise<Response>
+  {
+    const { sub } = req.user as any;
+    const mentee = await this.menteeService.findByUserId(sub);
+    if (!mentee) {
+      return  res.status(HttpStatus.OK).json(res.formatResponse(HttpStatus.NOT_FOUND, "you are not a mentee"));
+    }
+
+    const session = await this.sessionService.findById(createRatingDto.sessionId);
+    if (!session) {
+      return  res.status(HttpStatus.OK).json(res.formatResponse(HttpStatus.NOT_FOUND, "session not found, please select a valid session to rate"));
+    }
+
+    if(createRatingDto.rate < 0 || createRatingDto.rate > 5 ){
+      return res.status(HttpStatus.BAD_REQUEST).json(res.formatResponse(HttpStatus.BAD_REQUEST, "invalid rating value"))
+    }
+
+    const rating = new Rating();
+
+    rating.mentee = mentee;
+    rating.mentor = createRatingDto.mentorId as any;
+    rating.rate = createRatingDto.rate;
+    rating.session = createRatingDto.sessionId as any;
+    rating.comment = createRatingDto.comment;
+
+    session.rating = rating;
+    await this.ratingService.create(rating);
+    await this.sessionService.update(session);
+    return res.status(HttpStatus.OK).json(res.formatResponse(HttpStatus.OK, "tutor rated successfully"));
+  }
+
+  @ApiBearerAuth()
+  @UseGuards(AuthGuard, RoleGuard)
+  @Roles(UserRole.Student, UserRole.ADMIN)
+  @Get("summary")
+  async getSummary(@Req() req: Request,  @Res() res: Response): Promise<Response>
+  {
+
+    const today = new Date();
+    today.setHours(0,0,0,0);
+
+    const { sub } = req.user as any;
+    const mentee = await this.menteeService.findByUserId(sub);
+    if (!mentee) {
+      return  res.status(HttpStatus.OK).json(res.formatResponse(HttpStatus.NOT_FOUND, "you are not a mentee"));
+    }
+
+    const { data } = await this.sessionService.findAll({mentee: { id: sub }, limit: Number.MAX_SAFE_INTEGER } as PaginationQueryDto<Session>)
+    const activeSession = await this.sessionService.findAll({ limit: Number.MAX_SAFE_INTEGER, mentee: {id: sub}, session_date: `>=${today.toISOString().split('T')[0]}`, } as PaginationQueryDto<Session>, ['mentor']);
+
+   const activeTutor = Array.from(new Map(activeSession.data.map((item) => [item.mentor.id, item])).values()).length;
+    const sessionBooked = data.length;
+    const subjects = mentee.preferredSubjects.length;
+    return res.status(HttpStatus.OK).json(res.formatResponse(HttpStatus.OK, "tutor retrieved successfully", {activeTutor, sessionBooked, subjects}));
   }
 
 

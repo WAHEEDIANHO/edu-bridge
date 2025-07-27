@@ -8,6 +8,7 @@ import { HashPassword } from '../utils/hash-password';
 import { JwtService } from '@nestjs/jwt';
 import { EmailServiceService } from '../email-service/email-service.service';
 import { ConfigService } from '@nestjs/config';
+import { UpdateUserDto } from './dto/update-user.dto';
 // import { ensureEntityExists } from '../utils/entity-exists';
 
 @Injectable()
@@ -95,6 +96,21 @@ export class UserService {
     if (!newPassword) throw new UnprocessableEntityException("New password is required");
 
     user.password = await this.hashPassword.hashPasswordAsync(newPassword);
+    return await this.userModel.save(user);
+  }
+
+  async update(id: string, updateUserDto: UpdateUserDto): Promise<User> {
+    const user = await this.findById(id);
+    if (!user) throw new NotFoundException("User not found");
+
+    // Update user properties
+    Object.assign(user, updateUserDto);
+
+    // Hash password if it is provided
+    if (updateUserDto.password) {
+      user.password = await this.hashPassword.hashPasswordAsync(updateUserDto.password);
+    }
+
     return await this.userModel.save(user);
   }
 }

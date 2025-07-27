@@ -1,7 +1,7 @@
 import { Mentor } from 'src/mentor/entities/mentor.entity';
 import {
   Entity, Column, PrimaryGeneratedColumn,
-  ManyToOne, CreateDateColumn, Index, Unique, OneToMany, JoinColumn, OneToOne,
+  ManyToOne, CreateDateColumn, Index, Unique, OneToMany, JoinColumn, OneToOne, PrimaryColumn, UpdateDateColumn,
 } from 'typeorm';
 import { DbEntity } from '../../utils/abstract/database/db-entity';
 import { IEntity } from '../../utils/abstract/database/i-enity';
@@ -11,21 +11,19 @@ import { MenteeLevel } from '../../mentee/abstraction/enums/mentee-level.enum';
 import { Session } from '../../session/entities/session.entity';
 
 @Entity('tbl_availability_slots')
-@Unique("mentor-day-level",["mentor", "day", "level"])
-@Unique("mentor-startTime-day", ["mentor", "startTime", "day"])
-@Unique("mentor-endTIme-day", ["mentor", "endTime", "day"])
+@Unique("mentor-day",["mentor", "day"])
 export class AvailabilitySlot extends DbEntity implements IEntity{
 
+  // declare id: string;
+
+  // @PrimaryColumn({ type: 'uuid' })
+  // mentorId: string;
+
   @ManyToOne(() => Mentor, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'mentorId' })
   mentor: Mentor;
 
-  @OneToOne(() => Session, { onDelete: 'CASCADE', nullable: true })
-  @JoinColumn()
-  session?: Session
-
-  @Column({type: "int", nullable: true})
-  no_of_participant_allow: number
-
+  @Column({ type: 'varchar', length: 64 })
   @Column({ type: 'varchar', enum: DayOfWeek })
   day: string;
 
@@ -35,16 +33,15 @@ export class AvailabilitySlot extends DbEntity implements IEntity{
   @Column({ type: 'time' })
   endTime: string; // e.g., 15:00:00
 
-  // @Column({ type: 'boolean', default: true })
-  // available: boolean;
+  // @CreateDateColumn()
+  // createdAt?: Date;
+  // @UpdateDateColumn()
+  // updatedAt?: Date;
 
-  @Column({ type: 'varchar', enum: MenteeLevel })
-  level: string
-
-  @Column({ type: 'boolean', default: true })
-  is_open_for_booking: boolean;
 
   @OneToMany(() => Booking, (booking) => booking.slot)
   bookings: Booking[];
+
+
 }
 

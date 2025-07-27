@@ -27,14 +27,14 @@ export class BookingEventHandler implements IEventHandler<BookingEvent> {
     session.zoom_join_link = zoomLink.join_url;
     session.startTime = slot.startTime;
     session.endTime = slot.endTime;
-    session.level = slot.level;
-    session.no_of_participant_allow = slot.no_of_participant_allow;
-    session.slot = slot;
+    // session.level = slot.level;
+    // session.no_of_participant_allow = slot.no_of_participant_allow;
+    // session.slot = slot;
 
     //saving can later implement typeorm transaction
     await this.sessionService.create(session);
-    slot.session = session;
-    slot.is_open_for_booking = false;
+    // slot.session = session;
+    // slot.is_open_for_booking = false;
     await this.availabilitySlotService.update(slot);
   }
 }

@@ -26,7 +26,7 @@ export class Mentee extends DbEntity implements IEntity {
   location: string;
 
 
-  @OneToOne(() => User, () => null, { onDelete: 'CASCADE' } )
+  @OneToOne(() => User, () => null, { onDelete: 'CASCADE', eager: true } )
   @JoinColumn()
   user: User;
 

@@ -2,10 +2,10 @@ import { Column, Entity, JoinColumn, OneToMany, OneToOne, Unique } from 'typeorm
 import { User } from '../../user/entities/user.entity';
 import { DbEntity } from '../../utils/abstract/database/db-entity';
 import { IEntity } from '../../utils/abstract/database/i-enity';
-import { Rate } from './rate.entity';
 import { AvailabilityStatus } from '../abstraction/enum/availability-status.enum';
 import { CompetencySubject } from './competency-subject.entity';
 import { AvailabilitySlot } from '../../availability-slot/entities/availability-slot.entity';
+import { Rating } from '../../rating/entities/rating.entity';
 
 @Unique(['user'])
 @Entity("tbl_mentors")
@@ -37,17 +37,21 @@ export class Mentor extends DbEntity implements IEntity {
 
 
   //relationships
-  @OneToOne(() => User, () => null, { onDelete: 'CASCADE' })
+  @OneToOne(() => User, () => null, { onDelete: 'CASCADE', eager: true })
   @JoinColumn()
   user: User;
 
-  @OneToMany(() => Rate, (rate: Rate) => rate.mentor)
-  rates?: Rate[];
+  @OneToMany(() => Rating, (rate: Rating) => rate.mentor)
+  rates?: Rating[];
 
 
-  @OneToMany(() => CompetencySubject, (competencySubject: CompetencySubject) => competencySubject.mentor, { cascade: true })
+  @OneToMany(() => CompetencySubject,
+    (competencySubject: CompetencySubject) => competencySubject.mentor,
+    { cascade: true, orphanedRowAction: "delete" })
   competencySubjects?: CompetencySubject[];
 
-  @OneToMany(() => AvailabilitySlot, (slot: AvailabilitySlot) => slot.mentor, { cascade: true })
-  mySlots?: AvailabilitySlot[];
+  @OneToMany(() => AvailabilitySlot,
+    (slot: AvailabilitySlot) => slot.mentor,
+    { cascade: true, orphanedRowAction: "delete" })
+  slots?: AvailabilitySlot[];
 }
