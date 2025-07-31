@@ -11,6 +11,7 @@ import { ResponseFormatterMiddleware } from './utils/response-formatter.middlewa
 import * as basicAuth from 'express-basic-auth';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+  app.enableCors();
 
   app.use('/api-docs', basicAuth({
     users: { 'admin': process.env.BASIC_AUTH_PASSWORD || 'password' },
