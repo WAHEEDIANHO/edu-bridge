@@ -1,40 +1,29 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+// conference.controller.ts
+import { Controller, Post, Body, Query, Get } from '@nestjs/common';
 import { ConferenceService } from './conference.service';
-import { CreateConferenceDto } from './dto/create-conference.dto';
-import { UpdateConferenceDto } from './dto/update-conference.dto';
-import { ApiExcludeController } from '@nestjs/swagger';
-@ApiExcludeController()
+
 @Controller('conference')
 export class ConferenceController {
-  constructor(private readonly conferenceService: ConferenceService) {}
+  constructor(private readonly service: ConferenceService) {}
 
-  @Post()
-  create(@Body() createConferenceDto: CreateConferenceDto) {
-    return this.conferenceService.createMeeting("Edu-Bridge Virtual Classroom");
+  @Post('create')
+  async createMeeting(@Body('topic') topic: string) {
+    const meeting = await this.service.createMeeting(topic || 'EduBridge Meeting');
+    const signature = this.service.generateSdkSignature(meeting.id.toString(), 1); // 1 = host
+    return {
+      sdkKey: process.env.ZOOM_SDK_KEY,
+      meetingNumber: meeting.id,
+      password: meeting.password,
+      signature,
+      topic: meeting.topic,
+      join_url: meeting.join_url,
+    };
   }
 
-  @Get("zoom-sdk-jwt")
-  getZoomSdkJwt() {
-    return this.conferenceService.getMeetingSDKJWT();
+  @Get('signature')
+  getSignature(@Query('meetingNumber') meetingNumber: string, @Query('role') role: string) {
+    return {
+      signature: this.service.generateSdkSignature(meetingNumber, parseInt(role)),
+    };
   }
-
-  // @Get()
-  // findAll() {
-  //   return this.conferenceService.findAll();
-  // }
-  //
-  // @Get(':id')
-  // findOne(@Param('id') id: string) {
-  //   return this.conferenceService.findOne(+id);
-  // }
-  //
-  // @Patch(':id')
-  // update(@Param('id') id: string, @Body() updateConferenceDto: UpdateConferenceDto) {
-  //   return this.conferenceService.update(+id, updateConferenceDto);
-  // }
-  //
-  // @Delete(':id')
-  // remove(@Param('id') id: string) {
-  //   return this.conferenceService.remove(+id);
-  // }
 }

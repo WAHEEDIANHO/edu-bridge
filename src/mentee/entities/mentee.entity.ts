@@ -32,4 +32,10 @@ export class Mentee extends DbEntity implements IEntity {
 
   @OneToMany(() => Booking, (booking) => booking.mentee)
   bookings: Booking[];
+
+
+  toJSON(): this {
+    delete this.updatedAt;
+    return this
+  }
 }
