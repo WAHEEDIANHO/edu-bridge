@@ -22,8 +22,6 @@ async function bootstrap() {
     prefix: '/static',
   });
   
-  app.enableCors()
-  const app = await NestFactory.create(AppModule);
   app.enableCors();
 
   app.use('/api-docs', basicAuth({
