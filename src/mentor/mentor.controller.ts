@@ -381,7 +381,7 @@ export class MentorController {
 
   @Get(':id')
   async findOne(@Param('id') id: string, @Res() res: Response): Promise<Response> {
-    const mentor = await this.mentorService.findById(id, ['user']);
+    const mentor = await this.mentorService.findById(id, ['user', 'competencySubjects', 'slots']);
     return res.status(HttpStatus.OK).json(res.formatResponse(HttpStatus.OK, "Mentor found successfully", mentor));
   }
 
