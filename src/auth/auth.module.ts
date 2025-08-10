@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { UserService } from '../user/user.service';
@@ -15,6 +15,7 @@ import { EmailServiceService } from '../email-service/email-service.service';
 import { ExtractToken } from '../utils/extract-token';
 import { UserModule } from '../user/user.module';
 import { Otp } from './entities/otp.entity';
+import { WalletModule } from '../transaction/wallet/wallet.module';
 
 @Module({
   imports: [
@@ -33,6 +34,7 @@ import { Otp } from './entities/otp.entity';
     // CacheModule.register({
     //   ttl: 30000, // seconds
     // })
+    forwardRef(() => WalletModule)
   ],
   controllers: [AuthController],
   providers: [AuthService, UserService,  HashPassword, GoogleStrategy, EmailServiceService, ExtractToken],

@@ -20,6 +20,13 @@ export class ConferenceController {
     };
   }
 
+  @Get('create')
+  getZoomConfig() {
+    return {
+      sdkKey: process.env.ZOOM_SDK_KEY,
+    };
+  }
+
   @Get('signature')
   getSignature(@Query('meetingNumber') meetingNumber: string, @Query('role') role: string) {
     return {

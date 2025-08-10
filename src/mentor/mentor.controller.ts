@@ -99,8 +99,8 @@ export class MentorController {
 
     console.log(mentor.slots)
     console.log(mentor.competencySubjects)
-    await this.mentorService.create(mentor);
-    return res.status(HttpStatus.OK).json(res.formatResponse(HttpStatus.OK, "Mentor created successfully", {}));
+    await this.mentorService.createMentorWithWallet(mentor);
+    return res.status(HttpStatus.OK).json(res.formatResponse(HttpStatus.OK, "Mentor created successfully with wallet", {}));
   }
 
   @Put("update-profile")

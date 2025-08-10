@@ -4,8 +4,8 @@ import { UserController } from './user.controller';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { User } from './entities/user.entity';
 import { HashPassword } from '../utils/hash-password';
-import { JwtModule, JwtService } from '@nestjs/jwt';
-import { EmailServiceService } from '../email-service/email-service.service';
+import { JwtModule } from '@nestjs/jwt';
+import { EmailServiceModule } from '../email-service/email-service.module';
 import { ExtractToken } from '../utils/extract-token';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 
@@ -19,10 +19,11 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
       }),
     }),
     TypeOrmModule.forFeature([User]),
-
+    EmailServiceModule,
+    ConfigModule
   ],
   controllers: [UserController],
-  providers: [UserService, HashPassword, JwtService, EmailServiceService, ExtractToken, ConfigService ],
+  providers: [UserService, HashPassword, ExtractToken],
   exports: [UserService],
 })
 export class UserModule {}

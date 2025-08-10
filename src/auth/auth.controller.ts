@@ -20,6 +20,7 @@ import { AuthGuard } from '@nestjs/passport';
 import { IGoogleUser } from './types/i-google.user';
 import { ForgetPasswordDto } from './dto/forgot-password.dto';
 import { VerifyForgetPasswordDto } from './dto/verify-forget-password.dto';
+import { WalletService } from 'src/transaction/wallet/wallet.service';
 
 @Controller('auth')
 @ApiTags('Auth')
@@ -27,6 +28,7 @@ export class AuthController {
   constructor(
     private readonly authService: AuthService,
     private readonly userService: UserService,
+    private readonly walletService: WalletService
     // private readonly hashPassword: HashPassword,
     // private readonly emailService: EmailServiceService,
     // private readonly jwtService: JwtService
@@ -35,12 +37,19 @@ export class AuthController {
   @Post('login')
   async login( @Body(new ValidationPipe()) loginDto: LoginDto, @Res() res: Response ): Promise<Response> {
     const { access_token, user } = await this.authService.login(loginDto);
+    delete user?.password;
+    delete user?.createdAt;
+    delete user?.updatedAt;
+    const accountNo = await this.walletService.getWalletByUserEmail(loginDto.email);
     return res
       .status(HttpStatus.OK)
       .json(
         res.formatResponse(HttpStatus.OK, 'login successfully', {
           access_token,
-          user,
+          user: {
+            ...user,
+            accountNo: accountNo?.accountNo
+          }
         }),
       );
   }

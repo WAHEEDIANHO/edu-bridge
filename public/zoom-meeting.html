@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>EduBridge Virtual Classroom</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://source.zoom.us/3.1.0/lib/vendor/react.min.js"></script>
+    <script src="https://source.zoom.us/3.1.0/lib/vendor/react-dom.min.js"></script>
+    <script src="https://source.zoom.us/3.1.0/lib/vendor/redux.min.js"></script>
+    <script src="https://source.zoom.us/3.1.0/lib/vendor/redux-thunk.min.js"></script>
+    <script src="https://source.zoom.us/3.1.0/lib/vendor/lodash.min.js"></script>
+    <script src="https://source.zoom.us/zoom-meeting-3.1.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            font-family: Arial, sans-serif;
+        }
+        
+        #app {
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        #zmmtg-root {
+            display: none;
+            height: 100vh;
+            width: 100%;
+            position: relative;
+            z-index: 999;
+        }
+        
+        .loading-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            background-color: #f5f5f5;
+        }
+        
+        .spinner {
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid #3498db;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .error-container {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            background-color: #f5f5f5;
+            padding: 0 20px;
+            text-align: center;
+        }
+        
+        .error-icon {
+            color: #e74c3c;
+            font-size: 48px;
+            margin-bottom: 20px;
+        }
+        
+        .session-info {
+            display: none;
+            padding: 20px;
+            background-color: #f8f9fa;
+            border-bottom: 1px solid #dee2e6;
+        }
+        
+        .session-info h2 {
+            margin-top: 0;
+            color: #2c3e50;
+        }
+        
+        .session-info p {
+            margin: 5px 0;
+            color: #7f8c8d;
+        }
+        
+        .btn {
+            display: inline-block;
+            padding: 10px 20px;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-top: 20px;
+            text-decoration: none;
+        }
+        
+        .btn:hover {
+            background-color: #2980b9;
+        }
+    </style>
+</head>
+<body>
+<div id="app">
+    <div id="session-info" class="session-info">
+        <h2 id="session-topic">Loading session...</h2>
+        <p id="session-date">Date: Loading...</p>
+        <p id="session-time">Time: Loading...</p>
+        <p id="session-role">Role: Loading...</p>
+    </div>
+    
+    <div id="loading" class="loading-container">
+        <div class="spinner"></div>
+        <p>Loading your virtual classroom...</p>
+    </div>
+    
+    <div id="error" class="error-container">
+        <div class="error-icon">⚠️</div>
+        <h2>Oops! Something went wrong</h2>
+        <p id="error-message">Unable to join the meeting.</p>
+        <a href="/" class="btn">Go Back</a>
+    </div>
+    
+    <div id="zmmtg-root"></div>
+    <div id="aria-notify-area"></div>
+</div>
+
+<script>
+    // Get session ID from URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const sessionId = urlParams.get('id');
+    
+    if (!sessionId) {
+        showError('Session ID is missing. Please go back and try again.');
+    } else {
+        // Initialize Zoom SDK
+        ZoomMtg.setZoomJSLib('https://source.zoom.us/3.1.0/lib', '/av');
+        ZoomMtg.preLoadWasm();
+        ZoomMtg.prepareWebSDK();
+        
+        // Fetch session details
+        fetchSessionDetails(sessionId);
+    }
+    
+    function fetchSessionDetails(sessionId) {
+        // Get the auth token from localStorage or cookies
+        const token = localStorage.getItem('auth_token');
+        console.log(token)
+        
+        if (!token) {
+            showError('Authentication required. Please log in and try again.');
+            return;
+        }
+        
+        axios.get(`/api/session/${sessionId}/zoom`, {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        })
+        .then(response => {
+            if (response.data && response.data.data) {
+                const sessionData = response.data.data;
+                updateSessionInfo(sessionData);
+                joinZoomMeeting(sessionData);
+            } else {
+                showError('Invalid session data received from server.');
+            }
+        })
+        .catch(error => {
+            console.error('Error fetching session details:', error);
+            let errorMessage = 'Failed to fetch session details.';
+            
+            if (error.response) {
+                if (error.response.status === 403) {
+                    errorMessage = 'You are not authorized to access this session.';
+                } else if (error.response.status === 404) {
+                    errorMessage = 'Session not found.';
+                } else if (error.response.data && error.response.data.message) {
+                    errorMessage = error.response.data.message;
+                }
+            }
+            
+            showError(errorMessage);
+        });
+    }
+    
+    function updateSessionInfo(sessionData) {
+        document.getElementById('session-topic').textContent = sessionData.topic || 'EduBridge Virtual Classroom';
+        
+        const sessionDate = new Date(sessionData.sessionDate);
+        document.getElementById('session-date').textContent = `Date: ${sessionDate.toLocaleDateString()}`;
+        document.getElementById('session-time').textContent = `Time: ${sessionData.startTime} - ${sessionData.endTime}`;
+        document.getElementById('session-role').textContent = `Role: ${sessionData.isMentor ? 'Mentor (Host)' : 'Mentee (Participant)'}`;
+        
+        document.getElementById('session-info').style.display = 'block';
+    }
+    
+    function joinZoomMeeting(sessionData) {
+        // Extract meeting number from the URL
+        const meetingUrl = sessionData.meetingUrl;
+        const meetingNumberMatch = meetingUrl.match(/\/j\/(\d+)/);
+        
+        if (!meetingNumberMatch || !meetingNumberMatch[1]) {
+            showError('Invalid meeting URL format.');
+            return;
+        }
+        
+        const meetingNumber = meetingNumberMatch[1];
+        
+        // Fetch signature from server
+        axios.get(`/api/conference/signature?meetingNumber=${meetingNumber}&role=${sessionData.isMentor ? '1' : '0'}`, {
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
+            }
+        })
+        .then(response => {
+            if (response.data && response.data.signature) {
+                console.log(response.data)
+                initZoomMeeting(meetingNumber, response.data.signature, sessionData);
+            } else {
+                showError('Failed to get meeting signature.');
+            }
+        })
+        .catch(error => {
+            console.error('Error fetching signature:', error);
+            showError('Failed to get meeting authentication.');
+        });
+    }
+    
+    function initZoomMeeting(meetingNumber, signature, sessionData) {
+        // Get user info from localStorage or set defaults
+        const userProfile = JSON.parse(localStorage.getItem('user_profile') || '{}');
+        const userName = userProfile.name || 'EduBridge User';
+        const userEmail = userProfile.email || '';
+        
+        // Get SDK key from server response or environment
+        axios.get('/api/conference/create', {
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
+            }
+        })
+        .then(response => {
+            const sdkKey = response.data.sdkKey;
+            
+            ZoomMtg.init({
+                leaveUrl: '/dashboard', // Redirect to dashboard after leaving
+                success: function() {
+                    document.getElementById('zmmtg-root').style.display = 'block';
+                    document.getElementById('loading').style.display = 'none';
+                    
+                    ZoomMtg.join({
+                        signature: signature,
+                        sdkKey: sdkKey,
+                        meetingNumber: meetingNumber,
+                        userName: userName,
+                        userEmail: userEmail,
+                        passWord: '', // Password is usually embedded in the join URL
+                        success: function() {
+                            console.log('Joined meeting successfully');
+                        },
+                        error: function(error) {
+                            console.error('Failed to join meeting:', error);
+                            document.getElementById('zmmtg-root').style.display = 'none';
+                            showError('Failed to join the meeting. Please try again later.');
+                        }
+                    });
+                },
+                error: function(error) {
+                    console.error('Failed to initialize Zoom:', error);
+                    showError('Failed to initialize the meeting interface.');
+                }
+            });
+        })
+        .catch(error => {
+            console.error('Error fetching SDK key:', error);
+            showError('Failed to get meeting configuration.');
+        });
+    }
+    
+    function showError(message) {
+        document.getElementById('loading').style.display = 'none';
+        document.getElementById('error').style.display = 'flex';
+        document.getElementById('error-message').textContent = message;
+    }
+</script>
+</body>
+</html>

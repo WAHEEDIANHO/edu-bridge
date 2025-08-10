@@ -50,7 +50,6 @@ export class UserService {
       newUser.password = await this.hashPassword.hashPasswordAsync(createUserDto.password);
       user = await this.userModel.save(newUser);
 
-      this.sendVerificationMail(user);
 
       // const token = this.jwtService.sign({ id: user.id, email: user.email }, {expiresIn: "2 days"});
       // await this.emailService.sendVerificationMail({
@@ -60,6 +59,7 @@ export class UserService {
       // })
     }
 
+    this.sendVerificationMail(user);
     return user
   }
 

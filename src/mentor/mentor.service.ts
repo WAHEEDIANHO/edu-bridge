@@ -20,6 +20,7 @@ import { CompetencySubject } from './entities/competency-subject.entity';
 import { User } from '../user/entities/user.entity';
 import { Session } from '../session/entities/session.entity';
 import { SessionService } from '../session/session.service';
+import { WalletService } from '../transaction/wallet/wallet.service';
 
 @Injectable()
 export class MentorService
@@ -31,7 +32,8 @@ export class MentorService
     // @InjectRepository(CompetencySubject)
     private readonly availabilitySlotService: AvailabilitySlotService,
     private readonly bookingService: BookingService,
-    private readonly sessionService: SessionService
+    private readonly sessionService: SessionService,
+    private readonly walletService: WalletService
   ) {
     super(repo);
   }
@@ -185,5 +187,23 @@ export class MentorService
   async saveAsync(mentor: Mentor): Promise<void> {
     if (!mentor) throw new UnprocessableEntityException("User data is required");
     await this.repo.save(mentor);
+  }
+
+  async createMentorWithWallet(mentor: Mentor): Promise<Mentor> {
+    // Save the mentor first
+    await this.repo.save(mentor);
+    
+    // Create wallet for the mentor
+    const wallet = await this.walletService.createWallet({
+      customerName: mentor.user?.firstName + ' ' + mentor.user?.lastName || 'Mentor',
+      userId: mentor.user?.id || mentor.id,
+      customerId: mentor.user?.id || mentor.id,
+      email: mentor.user?.email,
+      userType: 'mentor'
+    });
+    
+    console.log(`Wallet created for mentor ${mentor.id}: ${wallet.accountNo}`);
+    
+    return mentor;
   }
 }

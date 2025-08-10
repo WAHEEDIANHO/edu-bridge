@@ -20,6 +20,7 @@ import { Subject } from '../admin/modules/subject/entities/subject.entity';
 import { Session } from '../session/entities/session.entity';
 import { SessionModule } from '../session/session.module';
 import { RatingModule } from '../rating/rating.module';
+import { WalletModule } from '../transaction/wallet/wallet.module';
 
 @Module({
   imports: [TypeOrmModule.forFeature([User, Mentee, MenteeSubject, Booking, AvailabilitySlot, MenteeSubject, MenteeSubject, Subject, Session]), AuthModule, JwtModule.registerAsync({
@@ -28,7 +29,7 @@ import { RatingModule } from '../rating/rating.module';
     useFactory: async (configService: ConfigService) => ({
       secret: configService.get('SECRET_KEY'),
     }),
-  }),ConfigModule, BookingModule, AvailabilitySlotModule, SessionModule, RatingModule],
+  }),ConfigModule, BookingModule, AvailabilitySlotModule, SessionModule, RatingModule, WalletModule],
   controllers: [MenteeController],
   providers: [MenteeService, UserService, HashPassword, EmailServiceService, ExtractToken],
 })

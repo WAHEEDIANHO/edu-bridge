@@ -11,6 +11,7 @@ import {
   Req,
   HttpStatus,
   Query, Inject,
+  BadRequestException,
 } from '@nestjs/common';
 import { BookingService } from './booking.service';
 import { CreateBookingDto } from './dto/create-booking.dto';
@@ -36,6 +37,11 @@ import { BookingEvent } from './abstraction/event/booking.event';
 import { Session } from '../session/entities/session.entity';
 import { ConferenceService } from '../conference/conference.service';
 import { SessionService } from '../session/session.service';
+import { WalletService } from '../transaction/wallet/wallet.service';
+import { PaymentDto } from '../transaction/wallet/dto/payment.dto';
+import { WalletTransaction } from '../transaction/entities/transaction.entity';
+import { TransactionService } from '../transaction/transaction.service';
+import { Wallet } from '../transaction/wallet/entities/wallet.entity';
 
 
 
@@ -48,6 +54,8 @@ export class BookingController {
     private readonly availabilitySlotService: AvailabilitySlotService,
     private readonly conferenceService: ConferenceService,
     private readonly sessionService: SessionService,
+    private readonly walletService: WalletService,
+    // private readonly transactionService: TransactionService,
     // Assuming this is the service that handles conference/zoom meetings
     // private readonly eventBus: EventBus
     ) {}
@@ -63,9 +71,30 @@ export class BookingController {
 
     const student = await this.menteeService.findByUserId(sub);
     if (!student) {
-      return  res.status(HttpStatus.OK).json(res.formatResponse(HttpStatus.NOT_FOUND, "you are not a student"));
+      return res.status(HttpStatus.OK).json(res.formatResponse(HttpStatus.NOT_FOUND, "you are not a student"));
     }
 
+    // Get mentor details to check rate
+    const mentor = await this.mentorService.findById(dto.mentorId as string);
+    if (!mentor) {
+      return res.status(HttpStatus.NOT_FOUND).json(res.formatResponse(HttpStatus.NOT_FOUND, "Mentor not found"));
+    }
+
+    // Calculate total cost based on mentor's rate and booking duration
+    const ratePerHour = mentor.ratePerHour;
+    const durationInHours = dto.duration / 60; // Convert minutes to hours
+    const totalCost = ratePerHour * durationInHours;
+
+    // Check if mentee has sufficient funds in wallet
+    const menteeWallet = await this.walletService.getWalletByUserId(student.user.id);
+    if (!menteeWallet) {
+      return res.status(HttpStatus.BAD_REQUEST).json(res.formatResponse(HttpStatus.BAD_REQUEST, "Mentee does not have a wallet"));
+    }
+
+    const walletBalance = await this.walletService.getWalletBalance(menteeWallet.accountNo);
+    if (walletBalance < totalCost) {
+      return res.status(HttpStatus.BAD_REQUEST).json(res.formatResponse(HttpStatus.BAD_REQUEST, `Insufficient funds. Required: ${totalCost}, Available: ${walletBalance}`));
+    }
 
     const booking = new Booking();
     booking.mentee = student;
@@ -75,7 +104,7 @@ export class BookingController {
     booking.prefer_time = dto.preferTime;
     booking.prefer_date = dto.preferDate;
     booking.subject = dto.subject as any;
-    booking.mentor = dto.mentorId as any;
+    booking.mentor = mentor;
     await this.service.create(booking);
 
     return res.status(HttpStatus.CREATED).json(res.formatResponse(HttpStatus.CREATED, "successful", { id: booking.id }))
@@ -127,11 +156,113 @@ export class BookingController {
   @Roles(UserRole.Teacher)
   @Patch(':id')
   async update(@Param('id') id: string, @Body(new ValidationPipe()) dto: UpdateBookingDto, @Res() res: Response): Promise<Response> {
-    const booking = await this.service.findById(id, ['mentee', 'mentor', 'subject']);
+    const booking = await this.service.findById(id, ['mentee.user', 'mentor.user', 'subject']);
     if (!booking) return res.status(HttpStatus.NOT_FOUND).json(res.formatResponse(HttpStatus.NOT_FOUND, "no booking with the given Id"));
+    
+    // Store previous status to check if it's changing to confirmed
+    const previousStatus = booking.status;
     booking.status = dto.status;
 
-    if(dto.status === 'confirmed') {
+    if(dto.status === 'confirmed' && previousStatus !== 'confirmed') {
+      // Calculate total cost based on mentor's rate and booking duration
+      const ratePerHour = booking.mentor.ratePerHour;
+      const durationInHours = booking.duration / 60; // Convert minutes to hours
+      const totalCost = ratePerHour * durationInHours;
+
+      // Get mentee's wallet
+      const menteeWallet = await this.walletService.getWalletByUserId(booking.mentee.user.id);
+      if (!menteeWallet) {
+        return res.status(HttpStatus.BAD_REQUEST).json(res.formatResponse(HttpStatus.BAD_REQUEST, "Mentee does not have a wallet"));
+      }
+
+      // Check if mentee has sufficient funds
+      const walletBalance = await this.walletService.getWalletBalance(menteeWallet.accountNo);
+      if (walletBalance < totalCost) {
+        return res.status(HttpStatus.BAD_REQUEST).json(res.formatResponse(HttpStatus.BAD_REQUEST, `Insufficient funds. Required: ${totalCost}, Available: ${walletBalance}`));
+      }
+
+      // Get mentor's wallet
+      const mentorWallet = await this.walletService.getWalletByUserId(booking.mentor.user.id);
+      if (!mentorWallet) {
+        return res.status(HttpStatus.BAD_REQUEST).json(res.formatResponse(HttpStatus.BAD_REQUEST, "Mentor does not have a wallet"));
+      }
+
+      // Debit mentee's wallet (but don't credit mentor's wallet yet)
+      try {
+        // Create payment data
+        const paymentData = {
+          fromAccountNo: menteeWallet.accountNo,
+          amount: totalCost,
+          bookingId: booking.id,
+          mentorWalletAccountNo: mentorWallet.accountNo,
+          mentorName: `${booking.mentor.user.firstName} ${booking.mentor.user.lastName}`
+        };
+
+        // Create a transaction record with metadata
+        const transaction = new WalletTransaction();
+        transaction.customerAccountNo = menteeWallet.accountNo;
+        transaction.drAmount = totalCost;
+        transaction.crAmount = 0;
+        transaction.type = 'BOOKING_PAYMENT';
+        transaction.narration = `Payment for booking #${booking.id} with ${paymentData.mentorName}`;
+        transaction.status = 'completed';
+        transaction.transRef = `BOOKING-${booking.id}`;
+        transaction.transNo = `TR${Date.now()}${Math.floor(Math.random() * 10000)}`;
+        transaction.metadata = JSON.stringify({
+          bookingId: booking.id,
+          mentorWalletAccountNo: mentorWallet.accountNo,
+          amount: totalCost,
+          pendingCredit: true
+        });
+
+        // Use a database transaction to ensure atomicity
+        const queryRunner = this.walletService.getDataSource().createQueryRunner();
+        await queryRunner.connect();
+        await queryRunner.startTransaction();
+
+        try {
+          // Save transaction within the transaction context
+          await queryRunner.manager.save(transaction);
+
+          // Update wallet balance within the transaction context
+          const wallet = await queryRunner.manager.findOne(Wallet, {
+            where: { accountNo: menteeWallet.accountNo }
+          });
+          
+          if (!wallet) {
+            throw new Error(`Wallet with account number ${menteeWallet.accountNo} not found`);
+          }
+          
+          // Calculate current balance
+          const transactions = await queryRunner.manager.find(WalletTransaction, {
+            where: { customerAccountNo: menteeWallet.accountNo }
+          });
+          
+          const currentBalance = transactions.reduce((sum, tx) => {
+            const drAmount = tx.drAmount || 0;
+            const crAmount = tx.crAmount || 0;
+            return sum - Number(drAmount) + Number(crAmount);
+          }, 0);
+          
+          // Update wallet balance
+          wallet.balance = currentBalance - totalCost;
+          await queryRunner.manager.save(wallet);
+
+          // Commit the transaction
+          await queryRunner.commitTransaction();
+        } catch (error) {
+          // Rollback the transaction in case of error
+          await queryRunner.rollbackTransaction();
+          throw error;
+        } finally {
+          // Release the query runner
+          await queryRunner.release();
+        }
+      } catch (error) {
+        console.error('Error processing payment:', error);
+        return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json(res.formatResponse(HttpStatus.INTERNAL_SERVER_ERROR, "Error processing payment"));
+      }
+
       const [hours, minutes] = booking.prefer_time.split(':').map(Number);
       const now = new Date();
       const startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hours, minutes)
@@ -141,7 +272,6 @@ export class BookingController {
       const endHours = endDate.getHours().toString().padStart(2, '0');
       const endMinutes = endDate.getMinutes().toString().padStart(2, '0');
       const endTime = `${endHours}:${endMinutes}`;
-
 
       let zoomLink = await this.conferenceService.createMeeting("Edu-Bridge Virtual classroom");
       const session = new Session();

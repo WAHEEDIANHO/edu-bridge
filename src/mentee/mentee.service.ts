@@ -16,6 +16,7 @@ import { BookingService } from '../booking/booking.service';
 import { AvailabilitySlotService } from '../availability-slot/availability-slot.service';
 import { SessionService } from '../session/session.service';
 import { Session } from '../session/entities/session.entity';
+import { WalletService } from '../transaction/wallet/wallet.service';
 
 @Injectable()
 export class MenteeService extends GeneralService<Mentee> implements IMenteeService {
@@ -25,7 +26,8 @@ export class MenteeService extends GeneralService<Mentee> implements IMenteeServ
     @Inject(UserService) private readonly userService: UserService,
     @Inject(BookingService) private readonly bookingService: BookingService,
     @Inject(AvailabilitySlotService) private readonly availabilitySlotService: AvailabilitySlotService, // Assuming this is injected correctly, replace with actual service if needed
-    @Inject(SessionService) private readonly sessionService: SessionService
+    @Inject(SessionService) private readonly sessionService: SessionService,
+    private readonly walletService: WalletService
   ) {
     super(repo);
   }
@@ -75,6 +77,24 @@ export class MenteeService extends GeneralService<Mentee> implements IMenteeServ
       myMentor.push(obx);
     }
     return  myMentor;
+  }
+
+  async createMenteeWithWallet(mentee: Mentee): Promise<Mentee> {
+    // Save the mentee first
+    await this.repo.save(mentee);
+    
+    // Create wallet for the mentee
+    const wallet = await this.walletService.createWallet({
+      customerName: mentee.user?.firstName + ' ' + mentee.user?.lastName || 'Mentee',
+      customerId: mentee.user?.id || mentee.id,
+      userId: mentee.user?.id || mentee.id,
+      userType: 'mentee',
+      email: mentee.user?.email
+    });
+    
+    console.log(`Wallet created for mentee ${mentee.id}: ${wallet.accountNo}`);
+    
+    return mentee;
   }
 }
 
