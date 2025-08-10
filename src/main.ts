@@ -9,7 +9,20 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston/dist/winston.constant
 import { AppExceptionFilter } from './app-exception.filter';
 import { ResponseFormatterMiddleware } from './utils/response-formatter.middleware';
 import * as basicAuth from 'express-basic-auth';
+import { NestExpressApplication } from '@nestjs/platform-express';
+import { join } from 'path';
 async function bootstrap() {
+ const app = await NestFactory.create<NestExpressApplication>(AppModule);
+ 
+  // Set global prefix for all API routes
+  // app.setGlobalPrefix('api');
+  
+  // Configure static file serving
+  app.useStaticAssets(join(__dirname, '..', 'public'), {
+    prefix: '/static',
+  });
+  
+  app.enableCors()
   const app = await NestFactory.create(AppModule);
   app.enableCors();
 
@@ -43,6 +56,6 @@ async function bootstrap() {
 
   console.log('Documentation Created successfully.');
 
-  await app.listen(process.env.PORT ?? 3000);
+  await app.listen(process.env.PORT ?? 5000);
 }
 bootstrap();

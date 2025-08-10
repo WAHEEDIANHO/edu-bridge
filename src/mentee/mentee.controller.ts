@@ -82,8 +82,8 @@ export class MenteeController {
       });
     }
     // const the = [createMenteeDto?.preferredSubjects?.map((ps) => ({ subjectId: ps.subjectId, mentee: mentee }))]
-    await this.menteeService.create(mentee);
-    return res.status(HttpStatus.CREATED).json(res.formatResponse(HttpStatus.CREATED, "Mentee created successfully", {}));
+    await this.menteeService.createMenteeWithWallet(mentee);
+    return res.status(HttpStatus.CREATED).json(res.formatResponse(HttpStatus.CREATED, "Mentee created successfully with wallet", {}));
   }
 
   @Put("update-profile")

@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { BookingService } from './booking.service';
 import { BookingController } from './booking.controller';
 import { TypeOrmModule } from '@nestjs/typeorm';
@@ -23,12 +23,19 @@ import { ConferenceModule } from '../conference/conference.module';
 import { ConferenceService } from '../conference/conference.service';
 import { HttpModule } from '@nestjs/axios';
 import { SessionModule } from '../session/session.module';
+import { WalletModule } from '../transaction/wallet/wallet.module';
 // import { BookingEventHandler } from './events/booking-event.handler';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Booking, Mentor, Mentee, AvailabilitySlot, User]), JwtModule, UtilsModule,
-     UserModule,  AvailabilitySlotModule, ConferenceModule, SessionModule
+    TypeOrmModule.forFeature([Booking, Mentor, Mentee, AvailabilitySlot, User]), 
+    JwtModule, 
+    UtilsModule,
+    UserModule,  
+    AvailabilitySlotModule, 
+    ConferenceModule, 
+    forwardRef(() => SessionModule), 
+    forwardRef(() => WalletModule)
   ],
   controllers: [BookingController],
   providers: [BookingService, MentorService, MenteeService,

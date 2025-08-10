@@ -23,7 +23,25 @@
 
 ## Description
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+EduBridge is an educational platform that connects mentors and mentees for online learning sessions. The application is built using the [Nest](https://github.com/nestjs/nest) framework.
+
+### Key Features
+
+- **User Management**: Registration and authentication for mentors and mentees
+- **Booking System**: Schedule and manage learning sessions
+- **Messaging**: Real-time communication between users
+- **Payment Processing**: Secure payment handling for sessions
+- **Video Conferencing**: Integrated Zoom SDK for virtual classrooms
+
+### Zoom SDK Integration
+
+EduBridge integrates the Zoom SDK to provide seamless video conferencing capabilities:
+
+- Create Zoom meetings when a booking is confirmed
+- Join Zoom meetings directly from the application
+- Role-based access (mentors as hosts, mentees as participants)
+
+For detailed information about the Zoom SDK integration, see the [Zoom Integration Documentation](./docs/zoom-integration.md).
 
 ## Project setup
 

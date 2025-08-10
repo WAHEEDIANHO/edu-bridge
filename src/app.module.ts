@@ -26,6 +26,8 @@ import { CqrsModule } from '@nestjs/cqrs';
 import { DataSource } from 'typeorm';
 import { BookingSubscriber } from './booking/subscribers/booking.subscriber';
 import { FileUploadModule } from './file-upload/file-upload.module';
+import { MessagesModule } from './messages/messages.module';
+import { TransactionModule } from './transaction/transaction.module';
 
 @Module({
   imports: [
@@ -90,7 +92,9 @@ import { FileUploadModule } from './file-upload/file-upload.module';
     SessionModule,
     ActivityModule,
     CqrsModule.forRoot(),
-    FileUploadModule
+    FileUploadModule,
+    MessagesModule,
+    TransactionModule
   ],
   controllers: [],
   providers: [{provide: APP_GUARD, useClass: ThrottlerGuard}, BookingSubscriber],

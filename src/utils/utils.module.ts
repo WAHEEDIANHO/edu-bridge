@@ -4,7 +4,7 @@ import { HashPassword } from './hash-password';
 import { ResponseFormatterMiddleware } from './response-formatter.middleware';
 
 @Module({
-  providers: [ExtractToken, HashPassword],
-  exports: [ExtractToken, HashPassword]
+  providers: [ExtractToken, HashPassword, ExtractToken, HashPassword],
+  exports: [ExtractToken, HashPassword, ExtractToken, HashPassword]
 })
 export class UtilsModule {}

@@ -38,28 +38,26 @@ export class GeneralService<T extends IEntity> implements IGeneralService<T>{
       order = 'DESC',
     } = paginationReqDto;
 
-    // Remove reserved pagination keys
     ['cursor', 'limit', 'order', 'cursorField'].forEach((key) => delete paginationReqDto[key]);
 
     const field = String(cursorField);
     const flatFilter = this.flattenFilters(paginationReqDto);
+
     const query = this.repository.createQueryBuilder('entity')
       .orderBy(`entity.${field}`, order)
       .take(+limit + 1);
 
-    // Eagerly join direct relations
     relations.forEach((relation) => {
       query.leftJoinAndSelect(`entity.${relation}`, relation);
     });
 
-    // Cursor-based pagination
     if (cursor) {
       query.andWhere(`entity.${field} = :cursor`, { cursor });
     }
 
-    // Parser for values with operators
     const parseValue = (raw: any) => {
       if (raw === 'null') return { operator: 'IS', value: null };
+      if (raw === 'all') return { operator: null, value: null }; // skip this field
       if (typeof raw !== 'string') return { operator: '=', value: raw };
 
       if (raw.startsWith('like:')) return { operator: 'LIKE', value: `%${raw.slice(5)}%` };
@@ -71,21 +69,70 @@ export class GeneralService<T extends IEntity> implements IGeneralService<T>{
           return { operator: 'IN', value: raw.slice(3).split(',') };
         }
       }
+
       const match = raw.match(/^([<>]=?|=)(.+)$/);
       if (match) return { operator: match[1], value: match[2].trim() };
+
       return { operator: '=', value: raw };
     };
 
-    // Dynamic filters
+    // 🔥 Handle OR conditions
+    const orRaw = flatFilter.or || flatFilter.$or;
+    if (orRaw) {
+      const orConditions = Array.isArray(orRaw) ? orRaw : [orRaw];
+
+      const orQuery = orConditions.map((cond, i) => {
+        const [fieldPath, valRaw] = cond.split('=');
+        const { operator, value } = parseValue(valRaw);
+        const paramKey = `or_param_${i}`;
+
+        const parts = fieldPath.split('.');
+        let clause: string;
+
+        if (parts.length === 2) {
+          const [relation, field] = parts;
+
+          // Auto join relation if not already joined
+          if (!relations.includes(relation)) {
+            relations.push(relation);
+            query.leftJoinAndSelect(`entity.${relation}`, relation);
+          }
+
+          clause = `${relation}.${field} ${operator} :${paramKey}`;
+        } else {
+          clause = `entity.${fieldPath} ${operator} :${paramKey}`;
+        }
+
+        return {
+          clause,
+          paramKey,
+          paramValue: value,
+        };
+      });
+
+      const orSql = orQuery.map(q => q.clause).join(' OR ');
+      const orParams = Object.fromEntries(orQuery.map(q => [q.paramKey, q.paramValue]));
+
+      query.andWhere(`(${orSql})`, orParams);
+
+      delete flatFilter.or;
+      delete flatFilter.$or;
+    }
+
+
+    // Process remaining filters as before
     Object.entries(flatFilter).forEach(([key, raw]) => {
       const paramKey = key.replace(/\./g, '_');
       const { operator, value } = parseValue(raw);
+
+      if (operator === null) {
+        return; // skip filter
+      }
 
       const parts = key.split('.');
       if (parts.length === 2) {
         const [relation, field] = parts;
 
-        // Auto join if missing
         if (!relations.includes(relation)) {
           relations.push(relation);
           query.leftJoinAndSelect(`entity.${relation}`, relation);
@@ -99,19 +146,18 @@ export class GeneralService<T extends IEntity> implements IGeneralService<T>{
           query.andWhere(`${relation}.${field} ${operator} :${paramKey}`, { [paramKey]: value });
         }
       } else {
-        const field = key;
         if (operator === 'IS' && value === null) {
-          query.andWhere(`entity.${field} IS NULL`);
+          query.andWhere(`entity.${key} IS NULL`);
         } else if (operator === 'IN') {
-          query.andWhere(`entity.${field} IN (:...${paramKey})`, { [paramKey]: value });
+          query.andWhere(`entity.${key} IN (:...${paramKey})`, { [paramKey]: value });
         } else {
-          query.andWhere(`entity.${field} ${operator} :${paramKey}`, { [paramKey]: value });
+          query.andWhere(`entity.${key} ${operator} :${paramKey}`, { [paramKey]: value });
         }
       }
     });
 
-    // Execute and paginate
     const result = await query.getMany();
+
     let hasNextPage = false;
     let hasPreviousPage = false;
     let nextCursor: T[keyof T] | null = null;
@@ -122,12 +168,10 @@ export class GeneralService<T extends IEntity> implements IGeneralService<T>{
       if (result.length > limit) {
         hasPreviousPage = true;
         data = result.slice(0, limit);
-        previousCursor = hasPreviousPage ? data[data.length - 1][cursorField] : null;
-      } else if (result.length > 0) {
-        previousCursor = hasPreviousPage ? data[data.length - 1][cursorField] : null;
+        previousCursor = data[data.length - 1]?.[cursorField] ?? null;
       }
       if (data.length > 0) {
-        nextCursor = cursor ? data[0][cursorField] : null;
+        nextCursor = cursor ? data[0]?.[cursorField] : null;
         hasNextPage = !!cursor;
       }
       data = data.reverse();
@@ -135,12 +179,10 @@ export class GeneralService<T extends IEntity> implements IGeneralService<T>{
       if (result.length > limit) {
         hasNextPage = true;
         data = result.slice(0, limit);
-        nextCursor = hasNextPage ? data[data.length - 1][cursorField] : null;
-      } else if (result.length > 0) {
-        nextCursor = hasNextPage ? data[data.length - 1][cursorField] : null;
+        nextCursor = data[data.length - 1]?.[cursorField] ?? null;
       }
       if (data.length > 0) {
-        previousCursor = cursor ? data[0][cursorField] : null;
+        previousCursor = cursor ? data[0]?.[cursorField] : null;
         hasPreviousPage = !!cursor;
       }
     }
@@ -153,6 +195,7 @@ export class GeneralService<T extends IEntity> implements IGeneralService<T>{
       previousCursor,
     };
   }
+
 
 
   async  findById(id: any, relations?: string[]): Promise<T|null>
