@@ -12,7 +12,7 @@ import * as basicAuth from 'express-basic-auth';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { join } from 'path';
 async function bootstrap() {
-  const app = await NestFactory.create<NestExpressApplication>(AppModule);
+ const app = await NestFactory.create<NestExpressApplication>(AppModule);
  
   // Set global prefix for all API routes
   // app.setGlobalPrefix('api');
@@ -23,6 +23,9 @@ async function bootstrap() {
   });
   
   app.enableCors()
+  const app = await NestFactory.create(AppModule);
+  app.enableCors();
+
   app.use('/api-docs', basicAuth({
     users: { 'admin': process.env.BASIC_AUTH_PASSWORD || 'password' },
     challenge: true,
