@@ -7,7 +7,7 @@ import {
   UseGuards,
   BadRequestException,
   Query,
-  UnauthorizedException, Req,
+  UnauthorizedException, Req, Res, HttpStatus,
 } from '@nestjs/common';
 import { WalletService } from './wallet.service';
 // import { CreateWalletDto } from './dto/create-wallet.dto';
@@ -18,8 +18,9 @@ import { AuthGuard } from '../../auth/guard/auth.guard';
 import { RoleGuard } from '../../auth/guard/role.guard';
 import { Roles } from '../../auth/decorator/role.decorator';
 import { ApiBearerAuth } from '@nestjs/swagger';
-import { Request } from 'express';
+import { Request, Response } from 'express';
 import { UserRole } from 'src/user/entities/user.entity';
+import { TransactionQueryDto } from './dto/transaction-query-dto';
 
 @ApiBearerAuth()
 @UseGuards(AuthGuard)
@@ -43,14 +44,16 @@ export class WalletController {
 //   }
 
   @Get('details/:accountNo')
-  async getWalletDetails(@Param('accountNo') accountNo: string): Promise<any> {
+  async getWalletDetails(@Param('accountNo') accountNo: string, @Res() res: Response): Promise<Response> {
     const wallet = await this.walletService.getWallet(accountNo);
     const balance = await this.walletService.getWalletBalance(accountNo);
 
-    return {
+    const data = {
       ...wallet,
       currentBalance: balance
     };
+
+    return res.status(HttpStatus.OK).json(res.formatResponse(HttpStatus.OK, "account details received successfully", data));
   }
 
   @Get('user/:userId')
@@ -77,16 +80,11 @@ export class WalletController {
   async getTransactionHistory(
     @Req() req: any,
     @Param('accountNo') accountNo: string,
-    @Query('page') page: number = 1,
-    @Query('limit') limit: number = 10,
-    @Query('type') type?: string,
-    @Query('status') status?: string,
-    @Query('startDate') startDate?: string,
-    @Query('endDate') endDate?: string,
+    @Query()query: TransactionQueryDto
   ) {
     // Validate pagination parameters
-    const pageNum = Math.max(1, parseInt(page as any) || 1);
-    const limitNum = Math.min(100, Math.max(1, parseInt(limit as any) || 10));
+    const pageNum = Math.max(1, parseInt(query.page as any) || 1);
+    const limitNum = Math.min(100, Math.max(1, parseInt(query.limit as any) || 10));
     const offset = (pageNum - 1) * limitNum;
     
     // Security check: Verify user has access to this wallet
@@ -106,10 +104,10 @@ export class WalletController {
       limitNum,
       offset,
       {
-        type,
-        status,
-        startDate: startDate ? new Date(startDate) : undefined,
-        endDate: endDate ? new Date(endDate) : undefined
+        type: query.type,
+        status: query.status,
+        startDate: query.startDate ? new Date(query.startDate) : undefined,
+        endDate: query.endDate ? new Date(query.endDate) : undefined
       }
     );
     
@@ -130,10 +128,10 @@ export class WalletController {
         hasPrevPage
       },
       filters: {
-        type,
-        status,
-        startDate,
-        endDate
+        type: query?.type,
+        status: query?.status,
+        startDate: query.startDate ? new Date(query.startDate) : undefined,
+        endDate: query.endDate ? new Date(query.endDate) : undefined
       }
     };
   }
