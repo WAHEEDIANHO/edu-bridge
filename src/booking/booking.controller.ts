@@ -100,7 +100,7 @@ export class BookingController {
     booking.mentee = student;
     booking.slot = dto.slotId as any //selectedSlot;
     booking.note = dto?.note || "";
-    booking.duration = dto.duration;
+    booking.duration = durationInHours; //dto.duration;
     booking.prefer_time = dto.preferTime;
     booking.prefer_date = dto.preferDate;
     booking.subject = dto.subject as any;
@@ -138,8 +138,16 @@ export class BookingController {
     if (!mentor) {
       return  res.status(HttpStatus.OK).json(res.formatResponse(HttpStatus.NOT_FOUND, "you are not a mentor"));
     }
-    const bookings = await this.service.findAll({...query, status: 'pending', mentor:  { id: mentor.id }  } as PaginationQueryDto<Booking>, ['mentor', 'mentee', 'slot']);
-    return res.status(HttpStatus.OK).json(res.formatResponse(HttpStatus.OK, "booking retrieved successfully", bookings));
+    const bookings = await this.service.findAll({...query, status: 'pending', mentor:  { id: mentor.id }  } as PaginationQueryDto<Booking>, ['mentor']);
+
+    const fullBooking : Booking[] = [];
+    for (const item of bookings.data) {
+      const data = (await this.service.findById(item.id, ['mentee', 'mentor', 'slot', 'mentee.user']))!;
+
+      fullBooking.push(data)
+      // Optionally flatten or process as needed
+    }
+    return res.status(HttpStatus.OK).json(res.formatResponse(HttpStatus.OK, "booking retrieved successfully", fullBooking));
   }
 
   @ApiBearerAuth()

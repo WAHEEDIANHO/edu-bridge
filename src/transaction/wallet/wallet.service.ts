@@ -229,9 +229,11 @@ export class WalletService {
           message: 'User does not have a wallet'
         };
       }
+
+      console.log(wallet, "wallet is log here");
       
       const balance = await this.getWalletBalance(wallet.accountNo);
-      const { transactions, total } = await this.getTransactionHistory(wallet.accountNo, 5, 0);
+      const { transactions, total } : { transactions: WalletTransaction[], total: number } = await this.getTransactionHistory(wallet.accountNo, 5, 0);
       
       // Remove sensitive information
       const sanitizedWallet = {
@@ -939,7 +941,7 @@ export class WalletService {
       startDate?: Date;
       endDate?: Date;
     }
-  ): Promise<{ transactions: any[], total: number }> {  //come back and fixed
+  ): Promise<{ transactions: WalletTransaction[], total: number }> {  //come back and fixed
     try {
       const wallet = await this.walletRepository.findOne({
         where: { accountNo }
@@ -979,7 +981,7 @@ export class WalletService {
       }
 
       // Get transactions with filtering and pagination
-      const [transactions, total] = await this.transactionRepository.findAndCount({
+      const [transactions, total]: [transactions: WalletTransaction[], total: number] = await this.transactionRepository.findAndCount({
         where: queryConditions,
         order: { transDate: 'DESC' },
         skip: offset,
@@ -989,15 +991,10 @@ export class WalletService {
       // Process transactions to add helper properties
       const processedTransactions = transactions.map(transaction => {
         // Add isCredit and isDebit properties
-        const isCredit = transaction.crAmount > 0;
-        const amount = isCredit ? transaction.crAmount : transaction.drAmount;
+        // const isCredit = transaction.crAmount > 0;
+        // const amount = isCredit ? transaction.crAmount : transaction.drAmount;
         
-        return {
-          ...transaction,
-          isCredit,
-          isDebit: !isCredit,
-          amount
-        };
+        return transaction;
       });
       
       return { transactions: processedTransactions, total };
