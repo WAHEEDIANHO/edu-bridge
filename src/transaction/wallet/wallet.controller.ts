@@ -57,31 +57,27 @@ export class WalletController {
   }
 
   @Get('user/:userId')
-  async getUserWallet(@Param('userId') userId: string) {
+  async getUserWallet(@Param('userId') userId: string, @Res() res: Response): Promise<Response> {
     const walletInfo = await this.walletService.getWalletInfoForUser(userId);
     
     if (!walletInfo) {
-      return {
-        message: 'No wallet found for this user',
-        userId,
-        hasWallet: false
-      };
+      return res.status(HttpStatus.OK).json(res.formatResponse(HttpStatus.OK, `No wallet found for this user ${userId}`,  ))
     }
     
-    return {
-      message: 'Wallet found',
+    return res.status(HttpStatus.OK).json(res.formatResponse(HttpStatus.OK, "Wallet found", {
       userId,
       hasWallet: true,
       ...walletInfo
-    };
+    }));
   }
 
   @Get('transactions/:accountNo')
   async getTransactionHistory(
     @Req() req: any,
     @Param('accountNo') accountNo: string,
-    @Query()query: TransactionQueryDto
-  ) {
+    @Query()query: TransactionQueryDto,
+    @Res() res: Response
+  ): Promise<Response> {
     // Validate pagination parameters
     const pageNum = Math.max(1, parseInt(query.page as any) || 1);
     const limitNum = Math.min(100, Math.max(1, parseInt(query.limit as any) || 10));
@@ -116,7 +112,7 @@ export class WalletController {
     const hasNextPage = pageNum < totalPages;
     const hasPrevPage = pageNum > 1;
     
-    return {
+    return res.status(HttpStatus.OK).json(res.formatResponse(HttpStatus.OK, "Transaction retrieved successfully", {
       accountNo,
       transactions,
       pagination: {
@@ -133,57 +129,55 @@ export class WalletController {
         startDate: query.startDate ? new Date(query.startDate) : undefined,
         endDate: query.endDate ? new Date(query.endDate) : undefined
       }
-    };
+    }));
   }
 
   @Post('fund')
-  async fundWallet(@Body() fundWalletDto: FundWalletDto) {
+  async fundWallet(@Body() fundWalletDto: FundWalletDto, @Res() res: Response): Promise<Response> {
     const transaction = await this.walletService.fundWallet(fundWalletDto);
     const newBalance = await this.walletService.getWalletBalance(fundWalletDto.accountNo);
-    
-    return {
-      message: 'Wallet funded successfully',
+
+    return res.status(HttpStatus.OK).json(res.formatResponse(HttpStatus.OK,'Wallet funded successfully', {
       transaction,
       newBalance,
       currency: 'NGN'
-    };
+    }))
   }
 
   @Post('payment')
-  async makePayment(@Body() paymentDto: PaymentDto) {
+  async makePayment(@Body() paymentDto: PaymentDto, @Res() res: Response): Promise<Response> {
     const transaction = await this.walletService.makePayment(paymentDto);
     const fromBalance = await this.walletService.getWalletBalance(paymentDto.fromAccountNo);
     const toBalance = await this.walletService.getWalletBalance(paymentDto.toAccountNo);
     
-    return {
-      message: 'Payment processed successfully',
+    return res.status(HttpStatus.OK).json(res.formatResponse(HttpStatus.OK, "payment processed successful", {
       transaction,
       fromAccountBalance: fromBalance,
       toAccountBalance: toBalance,
       currency: 'NGN'
-    };
+    }));
   }
 
   @Post('withdraw/request')
-  async requestWithdrawal(@Body() withdrawRequestDto: WithdrawRequestDto) {
-    return await this.walletService.requestWithdrawal(withdrawRequestDto);
+  async requestWithdrawal(@Body() withdrawRequestDto: WithdrawRequestDto, @Res() res: Response): Promise<Response> {
+    const resp = await this.walletService.requestWithdrawal(withdrawRequestDto);
+    return res.status(HttpStatus.OK).json(res.formatResponse(HttpStatus.OK, "successful", resp))
   }
 
   @Post('withdraw/approve/:transactionId')
   @UseGuards(AuthGuard, RoleGuard)
   @Roles(UserRole.ADMIN)
-  async approveWithdrawal(@Req() req: Request,  @Param('transactionId') transactionId: string) {
+  async approveWithdrawal(@Req() req: Request,  @Param('transactionId') transactionId: string, @Res() res: Response) : Promise<Response> {
 
     const { sub } = req.user as any
     const transaction = await this.walletService.approveWithdrawal(transactionId, sub);
     const newBalance = await this.walletService.getWalletBalance(transaction.customerAccountNo);
     
-    return {
-      message: 'Withdrawal approved successfully',
+    return res.status(HttpStatus.OK).json(res.formatResponse(HttpStatus.OK, "Withdrawal approved successfully", {
       transaction,
       newBalance,
       currency: 'NGN'
-    };
+    }));
   }
 
   @Post('withdraw/reject/:transactionId')
@@ -191,26 +185,27 @@ export class WalletController {
   @Roles(UserRole.ADMIN)
   async rejectWithdrawal(
     @Param('transactionId') transactionId: string,
-    @Body() body: { reason?: string }
-  ) {
+    @Body() body: { reason?: string },
+    @Res() res: Response
+  ): Promise<Response> {
     const transaction = await this.walletService.rejectWithdrawal(transactionId, ""+body.reason);
     
-    return {
+    return res.status(HttpStatus.OK).json(res.formatResponse(HttpStatus.OK, "Withdrawal rejected", {
       message: 'Withdrawal rejected',
       transaction,
       reason: body.reason || 'Admin rejection'
-    };
+    }));
   }
 
   @Get('withdrawals/pending')
   @UseGuards(AuthGuard, RoleGuard)
   @Roles(UserRole.ADMIN)
-  async getPendingWithdrawals() {
+  async getPendingWithdrawals(@Res() res: Response): Promise<Response> {
     const withdrawals = await this.walletService.getPendingWithdrawals();
-    return {
+    return res.status(HttpStatus.OK).json(res.formatResponse(HttpStatus.OK, "", {
       pendingWithdrawals: withdrawals,
       totalPending: withdrawals.length
-    };
+    }));
   }
 
 } 
