@@ -39,6 +39,9 @@ import { CreateRatingDto } from '../rating/dto/create-rating.dto';
 import { SessionService } from '../session/session.service';
 import { session } from 'passport';
 import { Session } from '../session/entities/session.entity';
+import { CompetencySubject } from '../mentor/entities/competency-subject.entity';
+import { InjectQueue } from '@nestjs/bull';
+import { Queue } from 'bull';
 
 @Controller('mentee')
 @ApiTags("Mentee")
@@ -48,6 +51,7 @@ export class MenteeController {
     private readonly userService: UserService,
     private readonly ratingService: RatingService,
     private readonly sessionService: SessionService,
+    @InjectQueue('payment') private paymentProcessor: Queue,
     @InjectRepository(MenteeSubject) private readonly menteeSubjectRepo: Repository<MenteeSubject>,
     ) {}
 
@@ -224,6 +228,11 @@ export class MenteeController {
     session.rating = rating;
     await this.ratingService.create(rating);
     await this.sessionService.update(session);
+
+    if(rating.rate < 3) {
+      const job = await this.paymentProcessor.getJob(`payment-${session.id}`);
+      if(job) await job.remove();
+    }
     return res.status(HttpStatus.OK).json(res.formatResponse(HttpStatus.OK, "tutor rated successfully"));
   }
 

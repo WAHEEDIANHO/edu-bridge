@@ -240,7 +240,7 @@ export class SessionController {
       console.log('Session completed put payment process to queue');
       await this.paymentProcessorQueue.add('process-tutor-payment', {
         session
-      }, { delay: 60 * 60 * 1000 }) //1hr
+      }, { delay: 60 * 60 * 1000, jobId: `payment-${session.id}` },) //1hr
 
       console.log('Session completed put payment process to queue successfully');
     }
