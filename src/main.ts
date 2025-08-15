@@ -54,6 +54,6 @@ async function bootstrap() {
 
   console.log('Documentation Created successfully.');
 
-  await app.listen(process.env.PORT ?? 5000);
+  await app.listen(process.env.PORT ?? 3000);
 }
 bootstrap();

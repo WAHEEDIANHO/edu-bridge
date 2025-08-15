@@ -28,6 +28,7 @@ import { BookingSubscriber } from './booking/subscribers/booking.subscriber';
 import { FileUploadModule } from './file-upload/file-upload.module';
 import { MessagesModule } from './messages/messages.module';
 import { TransactionModule } from './transaction/transaction.module';
+import { BullModule } from '@nestjs/bull';
 
 @Module({
   imports: [
@@ -94,7 +95,16 @@ import { TransactionModule } from './transaction/transaction.module';
     CqrsModule.forRoot(),
     FileUploadModule,
     MessagesModule,
-    TransactionModule
+    TransactionModule,
+    BullModule.forRoot({
+      url: 'rediss://red-cpiir7mct0pc73fs4ef0:42eJS3CWVIf09vcBMcfYQ15EQW4nSSUI@oregon-keyvalue.render.com:6379',
+      redis: {
+        tls: {
+          rejectUnauthorized: false, // only for self-signed certs in local dev
+        },
+      },
+    })
+    // ScheduleModule.forRoot()
   ],
   controllers: [],
   providers: [{provide: APP_GUARD, useClass: ThrottlerGuard}, BookingSubscriber],
