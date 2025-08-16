@@ -11,7 +11,7 @@ import { Session } from '../../session/entities/session.entity';
 import { Subject } from '../../admin/modules/subject/entities/subject.entity';
 
 @Entity('tbl_bookings')
-@Unique(["mentee", "mentor", "slot"])
+@Unique(["mentee", "mentor", "slot", "prefer_date"])
 export class Booking extends DbEntity implements IEntity {
 
   @ManyToOne(() => Mentee, (mentee) => mentee.bookings)
