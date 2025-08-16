@@ -44,6 +44,8 @@ import { Session } from '../session/entities/session.entity';
 import { SessionService } from '../session/session.service';
 import { RatingService } from '../rating/rating.service';
 import { Rating } from '../rating/entities/rating.entity';
+import { InjectQueue } from '@nestjs/bull';
+import { Queue } from 'bull';
 
 
 @Controller('mentor')

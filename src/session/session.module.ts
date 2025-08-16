@@ -11,6 +11,9 @@ import { JwtModule } from '@nestjs/jwt';
 import { UtilsModule } from '../utils/utils.module';
 import { WalletModule } from '../transaction/wallet/wallet.module';
 import { TransactionModule } from '../transaction/transaction.module';
+import { SessionCompleteService } from './job/session-complete.service';
+import { BullModule } from '@nestjs/bull';
+import { EmailServiceModule } from '../email-service/email-service.module';
 
 @Module({
   imports: [
@@ -21,10 +24,14 @@ import { TransactionModule } from '../transaction/transaction.module';
     JwtModule, 
     UtilsModule,
     forwardRef(() => WalletModule),
-    TransactionModule
+    TransactionModule,
+    EmailServiceModule,
+    BullModule.registerQueue({
+      name: "payment"
+    })
   ],
   controllers: [SessionController],
-  providers: [SessionService, BookingEventHandler],
+  providers: [SessionService, BookingEventHandler, SessionCompleteService, SessionCompleteService],
   exports: [SessionService],
 })
 export class SessionModule {}

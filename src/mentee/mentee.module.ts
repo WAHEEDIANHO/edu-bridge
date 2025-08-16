@@ -21,9 +21,14 @@ import { Session } from '../session/entities/session.entity';
 import { SessionModule } from '../session/session.module';
 import { RatingModule } from '../rating/rating.module';
 import { WalletModule } from '../transaction/wallet/wallet.module';
+import { BullModule } from '@nestjs/bull';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([User, Mentee, MenteeSubject, Booking, AvailabilitySlot, MenteeSubject, MenteeSubject, Subject, Session]), AuthModule, JwtModule.registerAsync({
+  imports: [TypeOrmModule.forFeature([User, Mentee, MenteeSubject, Booking, AvailabilitySlot, MenteeSubject, MenteeSubject, Subject, Session]), AuthModule,
+    BullModule.registerQueue({
+      name: "payment"
+    }),
+    JwtModule.registerAsync({
     imports: [ConfigModule],
     inject: [ConfigService],
     useFactory: async (configService: ConfigService) => ({
