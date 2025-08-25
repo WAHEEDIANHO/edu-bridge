@@ -1,26 +1,1 @@
-import { Injectable } from '@nestjs/common';
-import { CreatePaymentDto } from './dto/create-payment.dto';
-import { UpdatePaymentDto } from './dto/update-payment.dto';
-
-@Injectable()
-export class PaymentService {
-  create(createPaymentDto: CreatePaymentDto) {
-    return 'This action adds a new payment';
-  }
-
-  findAll() {
-    return `This action returns all payment`;
-  }
-
-  findOne(id: number) {
-    return `This action returns a #${id} payment`;
-  }
-
-  update(id: number, updatePaymentDto: UpdatePaymentDto) {
-    return `This action updates a #${id} payment`;
-  }
-
-  remove(id: number) {
-    return `This action removes a #${id} payment`;
-  }
-}
+import { Injectable } from '@nestjs/common';import { ConfigService } from '@nestjs/config';import { IPaymentService } from './abstract/service/i-payment.service';import {  InjectRepository } from '@nestjs/typeorm';import { Repository } from 'typeorm';import { Payment } from './entities/payment.entity';import Paystack from '@paystack/paystack-sdk';interface BankResponse {  name: string;  code: string;  available_for_direct_debit: boolean;}@Injectable()export class PaymentService implements IPaymentService {  private paystack:  Paystack;  constructor(    private readonly configService: ConfigService,    @InjectRepository(Payment)repo: Repository<Payment>,    ) {    this.paystack = new Paystack(configService.get<string>('PAYSTACK_TEST_SECRET_KEY') || '');  }  async verifyAccount(accountNumber: string, bankCode: string): Promise<any> {    let res = await this.paystack.verification.resolveAccountNumber({ account_number: accountNumber, bank_code: bankCode });    return res;  }  async getBanks(): Promise<any> {    const banks = await this.paystack.verification.fetchBanks({ country: 'nigeria' });    return banks.data.map((bank: any) => {      const b: BankResponse = {        name: bank.name,        code: bank.code,        available_for_direct_debit: bank.available_for_direct_debit,      }      return b;    })  }  initializeTransaction(email: string, amount: number): Promise<any> {      throw new Error('Method not implemented.');  }  verifyTransaction(reference: string): Promise<any> {      throw new Error('Method not implemented.');  }  createTransferRecipient(name: string, accountNumber: string, bankCode: string): Promise<any> {      throw new Error('Method not implemented.');  }  initiateTransfer(amount: number, recipientCode: string): Promise<any> {      throw new Error('Method not implemented.');  }}
