@@ -36,8 +36,8 @@ export class AppDataSource {
       username: this.configService.get<string>('DB_USERNAME', 'edu_bridge_user'),
       password: this.configService.get<string>('DB_PASSWORD', 'sSRCICTqX2I3kNnCgVCGYqjVIrSFVnzE'),
       database: this.configService.get<string>('DB_NAME', 'edu-bridge'),
-      synchronize: true,
-      logging: false,
+      synchronize: false,
+      logging: true,
       // entities: [__dirname + '/**/*.entity{.ts,.js}'],
       extra: {
         trustServerCertificate: true, // Required for self-signed certs
