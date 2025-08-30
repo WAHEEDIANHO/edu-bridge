@@ -44,5 +44,10 @@ export class Booking extends DbEntity implements IEntity {
   // @OneToOne(() => Session, { cascade: true})
   // @JoinColumn()
   // session: Session;
+  
+  toJSON(): this {
+    this.duration = this.duration * 60; // convert to minutes
+    return this;
+  }
 
 }
