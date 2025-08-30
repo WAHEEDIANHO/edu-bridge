@@ -35,7 +35,7 @@ export class Booking extends DbEntity implements IEntity {
   @Column({ type: 'time' })
   prefer_time: string; // e.g., '14:00:00'
 
-  @Column({ type: 'int' })
+  @Column({ type: 'float', default: 0.00 })
   duration: number; // Duration in minutes
 
   @ManyToOne(() => Subject, { eager: true })

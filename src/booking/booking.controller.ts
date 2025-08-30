@@ -81,8 +81,8 @@ export class BookingController {
     }
 
     // Calculate total cost based on mentor's rate and booking duration
-    const ratePerHour = mentor.ratePerHour;
-    const durationInHours = dto.duration / 60; // Convert minutes to hours
+    const ratePerHour = Number(mentor.ratePerHour);
+    const durationInHours = Number(Number(dto.duration / 60).toFixed(2)); // Convert minutes to hours
     const totalCost = ratePerHour * durationInHours;
 
     // Check if mentee has sufficient funds in wallet
@@ -92,6 +92,7 @@ export class BookingController {
     }
 
     const walletBalance = await this.walletService.getWalletBalance(menteeWallet.accountNo);
+    console.log("wallet balance is ", walletBalance);
     if (walletBalance < totalCost) {
       return res.status(HttpStatus.BAD_REQUEST).json(res.formatResponse(HttpStatus.BAD_REQUEST, `Insufficient funds. Required: ${totalCost}, Available: ${walletBalance}`));
     }
@@ -174,7 +175,7 @@ export class BookingController {
     if(dto.status === 'confirmed' && previousStatus !== 'confirmed') {
       // Calculate total cost based on mentor's rate and booking duration
       const ratePerHour = booking.mentor.ratePerHour;
-      const durationInHours = booking.duration / 60; // Convert minutes to hours
+      const durationInHours = booking.duration; // Convert minutes to hours
       const totalCost = ratePerHour * durationInHours;
 
       // Get mentee's wallet

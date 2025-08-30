@@ -17,9 +17,9 @@ export class CreateMentorDto extends CreateUserDto {
   @ApiProperty({ required: true })
   @IsCurrency({ allow_decimal: true, allow_negatives: false })
   ratePerHour: number;
-  @ApiProperty({ required: true, enum: AvailabilityStatus })
-  @IsEnum(AvailabilityStatus, { message: 'availability must be one of the following values: AVAILABLE, ADVANCE' })
-  availability: AvailabilityStatus;
+  // @ApiProperty({ required: true, enum: AvailabilityStatus })
+  // @IsEnum(AvailabilityStatus, { message: 'availability must be one of the following values: AVAILABLE, ADVANCE' })
+  // availability: AvailabilityStatus;
   @ApiProperty({ required: true })
   @IsString({ message: 'value must be a string' })
   profilePictureUrl: string;
