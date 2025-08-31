@@ -9,6 +9,16 @@ import { FundWalletDto } from './dto/fund-wallet.dto';
 import { PaymentDto } from './dto/payment.dto';
 import { WithdrawRequestDto } from './dto/withdraw-request.dto';
 import * as crypto from 'crypto';
+import {
+  InitializeTransactionResponse,
+  PaymentService,
+} from '../../payment/payment.service';
+import { ConfigService } from '@nestjs/config';
+import { Request } from 'express';
+export class IWalletFundingResponse {
+  payment_gateway : InitializeTransactionResponse
+  transaction: WalletTransaction
+}
 
 @Injectable()
 export class WalletService {
@@ -20,6 +30,8 @@ export class WalletService {
     @InjectRepository(WalletTransaction) private readonly transactionRepository: Repository<WalletTransaction>,
     private readonly transactionService: TransactionService,
     private readonly dataSource: DataSource,
+    private readonly paymentService: PaymentService,
+    private readonly configService: ConfigService
   ) {}
 
   /**
@@ -42,6 +54,15 @@ export class WalletService {
     const expectedSignature = this.generateTransactionSignature(transaction);
     return crypto.timingSafeEqual(
       Buffer.from(signature, 'hex'),
+      Buffer.from(expectedSignature, 'hex')
+    );
+  }
+
+  private verifyPaystackSignature(req: any): boolean {
+    const secret = this.configService.get<string>("PAYSTACK_TEST_SECRET_KEY")!;
+    const expectedSignature = crypto.createHmac('sha512', secret).update(JSON.stringify(req.body)).digest('hex');
+    return crypto.timingSafeEqual(
+      Buffer.from(req.headers['x-paystack-signature'], 'hex'),
       Buffer.from(expectedSignature, 'hex')
     );
   }
@@ -230,7 +251,7 @@ export class WalletService {
         };
       }
 
-      console.log(wallet, "wallet is log here");
+      // console.log(wallet, "wallet is log here");
       
       const balance = await this.getWalletBalance(wallet.accountNo);
       const { transactions, total } : { transactions: WalletTransaction[], total: number } = await this.getTransactionHistory(wallet.accountNo, 5, 0);
@@ -270,7 +291,7 @@ export class WalletService {
     }
   }
 
-  async fundWallet(fundWalletDto: FundWalletDto, userId?: string): Promise<WalletTransaction> {
+  async fundWallet(fundWalletDto: FundWalletDto, userId?: string): Promise<IWalletFundingResponse> {
     // Start a transaction
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
@@ -309,7 +330,7 @@ export class WalletService {
       transaction.drAmount = 0;
       transaction.type = 'DEPOSIT';
       transaction.narration = `Wallet funding - ${fundWalletDto.paymentMethod || 'Manual'}`;
-      transaction.status = 'completed';
+      transaction.status = 'pending';
       transaction.transRef = fundWalletDto.reference || this.generateTransactionRef();
       transaction.transNo = this.generateTransactionNumber();
       transaction.transDate = new Date();
@@ -320,7 +341,8 @@ export class WalletService {
         fundingDetails: {
           amount: fundWalletDto.amount,
           paymentMethod: fundWalletDto.paymentMethod || 'Manual',
-          reference: fundWalletDto.reference
+          reference: transaction.transRef,
+          accountNo: fundWalletDto.accountNo,
         }
       };
       
@@ -333,12 +355,16 @@ export class WalletService {
 
       // Sign the transaction
       this.signTransaction(transaction);
+      
+      const data = await this.paymentService.initializeTransaction(wallet.email, fundWalletDto.amount, transaction.transRef, fundWalletDto.path, transaction.metadata);
+      
 
       // Save transaction within the transaction context
       await queryRunner.manager.save(transaction);
+      
 
       // Update wallet balance within the transaction context
-      wallet.balance = wallet.balance + fundWalletDto.amount;
+      // wallet.balance = wallet.balance + fundWalletDto.amount;
       await queryRunner.manager.save(wallet);
 
       // Commit the transaction
@@ -350,10 +376,12 @@ export class WalletService {
         accountNo: fundWalletDto.accountNo,
         amount: fundWalletDto.amount,
         paymentMethod: fundWalletDto.paymentMethod,
-        reference: fundWalletDto.reference
+        reference: fundWalletDto.reference,
+        status: `initialized and ${data.status}`,
+        message: data.message || ''
       });
 
-      return transaction;
+      return { transaction, payment_gateway: data };
     } catch (error) {
       // Rollback the transaction in case of error
       await queryRunner.rollbackTransaction();
@@ -909,6 +937,7 @@ export class WalletService {
 
       // Calculate balance
       const balance = transactions.reduce((sum, transaction) => {
+        if (["pending", "failed", "rejected"].includes(transaction.status)) return sum;          
         const drAmount = transaction.drAmount || 0;
         const crAmount = transaction.crAmount || 0;
         return sum - Number(drAmount) + Number(crAmount);
@@ -1041,6 +1070,7 @@ export class WalletService {
         });
 
         balance = transactions.reduce((sum, transaction) => {
+          if (["pending", "failed", "rejected"].includes(transaction.status)) return sum;
           const drAmount = transaction.drAmount || 0;
           const crAmount = transaction.crAmount || 0;
           return sum - Number(drAmount) + Number(crAmount);
@@ -1058,7 +1088,7 @@ export class WalletService {
     } catch (error) {
       // Rollback the transaction in case of error
       await queryRunner.rollbackTransaction();
-      this.logger.error(`Updating wallet balance failed: ${error.message}`, error.stack);
+      this.logger.error(  `Updating wallet balance failed: ${error.message}`, error.stack);
       
       if (error instanceof NotFoundException) {
         throw error;
@@ -1070,6 +1100,70 @@ export class WalletService {
       await queryRunner.release();
     }
   }
+  
+  async handlePaystackWebhook(req: any): Promise<any> {
+    const signature = req.headers['x-paystack-signature'];
+    const secret =
+      this.configService.get<string>('PAYSTACK_TEST_SECRET_KEY') || '';
+
+    if (!this.verifyPaystackSignature(req)) {
+      throw new Error('Invalid signature');
+    }
+    const event = req.body as any;
+    // Handle the event
+    switch (event.event) {
+      case 'charge.success':
+        
+        // // console.log(event.data.metadata, "name========")
+        const mtdata = event.data.metadata;
+        const transaction = await this.transactionService.getTransactionsByReference(mtdata.fundingDetails.accountNo, event.data.reference);
+        if (!transaction) {
+          this.logger.warn(`Transaction with reference ${event.data.reference} not found for wallet funding`);
+          return { status: "failed", message: 'Transaction not found' };
+        }
+        
+        // console.log(transaction.crAmount, event.data.amount / 100, transaction.status, "amount========")
+        
+        if ( Number(transaction.crAmount).toFixed(2) !== Number(event.data.amount / 100).toFixed(2) || transaction.status === 'completed') {
+          this.logger.warn(`Transaction amount mismatch or already completed for reference ${event.data.reference}`);
+          return { status: "failed", message: 'Transaction amount mismatch or already completed' };
+        }
+        // Update transaction status to completed
+        transaction.status = 'completed';
+        // Update metadata with payment gateway response
+        const metadata = {
+          ...JSON.parse(transaction.metadata || '{}'),
+          paymentGatewayResponse: event.data
+        };
+        transaction.metadata = JSON.stringify(metadata);
+        this.signTransaction(transaction);
+        await this.transactionRepository.save(transaction);
+        // Update wallet balance
+        await this.updateWalletBalance(event.data.metadata.fundingDetails.accountNo);
+        // Log the successful funding
+        this.logAuditEvent('WALLET_FUNDED_VIA_PAYSTACK', transaction.wallet?.customerId || 'unknown', {
+          transactionId: transaction.id,
+          accountNo: event.data.metadata.fundingDetails.accountNo,
+          amount: transaction.crAmount,
+          reference: event.data.reference,
+          paymentGateway: 'Paystack'
+        }); 
+        
+        
+        // Then define and call a function to handle the event charge.success
+        // this.
+        // console.log("success charge",/ event.data.reference);
+        break;
+      case 'transfer.success':
+        // Then define and call a function to handle the event transfer.success
+        // console.log(event);
+        break;
+      // ... handle other event types
+      default:
+        // console.log(`Unhandled event type ${event.event}`);
+    }
+  }
+
 
   private generateAccountNumber(): string {
     const timestamp = Date.now().toString();

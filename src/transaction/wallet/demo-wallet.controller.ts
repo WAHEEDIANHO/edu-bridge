@@ -37,6 +37,7 @@ export class DemoWalletController {
       amount: 10000,
       paymentMethod: 'demo',
       reference: 'DEMO_FUND_001',
+      path: "/demo/wallet/setup-demo",
     });
 
     return {
@@ -134,7 +135,7 @@ export class DemoWalletController {
 
   @Post('demo-fund-wallet')
   async demoFundWallet(@Body() fundWalletDto: FundWalletDto) {
-    const transaction = await this.walletService.fundWallet(fundWalletDto);
+    const { transaction } = await this.walletService.fundWallet(fundWalletDto);
     const newBalance = await this.walletService.getWalletBalance(
       fundWalletDto.accountNo,
     );
@@ -195,6 +196,7 @@ export class DemoWalletController {
       amount: 5000,
       paymentMethod: 'test',
       reference: 'TEST_FUND_001',
+      path: '/student/wallet',
     });
 
     return {

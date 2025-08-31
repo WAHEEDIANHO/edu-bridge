@@ -115,4 +115,14 @@ export class TransactionService extends GeneralService<WalletTransaction> implem
       order: { transDate: 'DESC' }
     });
   }
+
+  async getTransactionsByReference(accountNo: string, reference: string): Promise<WalletTransaction|null> {
+    return await this.transactionRepository.findOne({
+      where: { 
+        customerAccountNo: accountNo,
+        transRef: reference
+      }
+    });
+  }
+
 }
