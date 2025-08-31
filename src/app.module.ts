@@ -59,7 +59,7 @@ import { BullModule } from '@nestjs/bull';
         password: configService.get<string>('DB_PASSWORD', 'password'),
         database: configService.get<string>('DB_NAME', 'edu-bridge'),
         synchronize: true,
-        logging: true,
+        logging: false,
         migrations: [__dirname + '/migrations/**/*{.ts,.js}'],
         entities: [__dirname + '/**/*.entity{.ts,.js}'],
         subscribers: [__dirname + '/**/*.subscriber{.ts,.js}'],

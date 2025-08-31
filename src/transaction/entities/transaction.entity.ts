@@ -27,7 +27,7 @@ export class WalletTransaction extends DbEntity implements IEntity {
 
   @Column({ type: 'decimal', precision: 10, scale: 2, default: 0 })
   crAmount: number;
-
+  
   @Column({ nullable: false })
   narration: string;
 

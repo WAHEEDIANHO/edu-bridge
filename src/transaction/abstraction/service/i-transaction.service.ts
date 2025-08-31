@@ -14,4 +14,6 @@ export interface ITransactionService extends IGeneralService<WalletTransaction> 
     lastTransactionDate?: Date;
   }>;
   validateTransaction(transaction: Partial<WalletTransaction>): Promise<boolean>;
+  getTransactionsByReference(accountNo: string, reference: string): Promise<WalletTransaction|null>;
+
 } 

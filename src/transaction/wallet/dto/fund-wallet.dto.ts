@@ -35,4 +35,13 @@ export class FundWalletDto {
   @IsString()
   @IsOptional()
   reference?: string;
+
+  @ApiProperty({
+    description: 'Paynment initiation path or URL',
+    example: '/student/wallet',
+    required: false
+  })
+  @IsString()
+  @IsOptional() 
+  path: string = "";
 } 

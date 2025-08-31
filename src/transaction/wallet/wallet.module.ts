@@ -7,13 +7,15 @@ import { WalletTransaction } from '../entities/transaction.entity';
 import { TransactionModule } from '../transaction.module';
 import { JwtModule } from '@nestjs/jwt';
 import { UtilsModule } from '../../utils/utils.module';
+import { PaymentModule } from '../../payment/payment.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Wallet, WalletTransaction]),
     TransactionModule,
     JwtModule, 
-    UtilsModule
+    UtilsModule,
+    PaymentModule
   ],
   controllers: [WalletController],
   providers: [WalletService],
