@@ -51,8 +51,8 @@ export class BookingService extends GeneralService<Booking> implements IBookingS
     }
 
     // Validate that the preferred time and duration fall within the slot's time range
-    const slotStartTime = this.parseTime(existingSlot.startTime);
-    const slotEndTime = this.parseTime(existingSlot.endTime);
+    const slotStartTime = this.parseTime(existingSlot.startTime); //return minute since midnight to the given hour
+    const slotEndTime = this.parseTime(existingSlot.endTime); // return minutes since midnight to the given hour
     const preferredStartTime = this.parseTime(prefer_time);
     const preferredEndTime = this.calculateEndTime(preferredStartTime, duration);
 

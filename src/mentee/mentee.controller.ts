@@ -192,7 +192,7 @@ export class MenteeController {
       return  res.status(HttpStatus.OK).json(res.formatResponse(HttpStatus.NOT_FOUND, "you are not a mentee"));
     }
 
-    const result = await this.menteeService.getMyTutor(query, mentee.id);
+    const result = await this.menteeService.getMyTutor(query, mentee.id); 
     return res.status(HttpStatus.OK).json(res.formatResponse(HttpStatus.OK, "tutor retrieved successfully", result));
   }
 

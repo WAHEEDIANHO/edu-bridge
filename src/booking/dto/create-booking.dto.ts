@@ -1,4 +1,15 @@
-import { IsUUID, IsOptional, IsString, IsNumber, IsBoolean, IsDate, IsDateString } from 'class-validator';
+import {
+  IsUUID,
+  IsOptional,
+  IsString,
+  IsNumber,
+  IsBoolean,
+  IsDate,
+  IsDateString,
+  IsInt,
+  Min,
+  Max,
+} from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class CreateBookingDto {
@@ -24,9 +35,16 @@ export class CreateBookingDto {
   @IsString()
   preferTime: string; // HH format
 
-  @ApiProperty()
-  @IsNumber()
-  duration: number
+  @ApiProperty({
+    description: 'Duration must be a whole number between 1 and 5',
+    minimum: 1,
+    maximum: 5,
+    example: 3,
+  })
+  @IsInt({ message: 'Duration must be a whole number' })
+  @Min(1, { message: 'Duration cannot be less than 1' })
+  @Max(5, { message: 'Duration cannot be greater than 5' })
+  duration: number;
 
   @ApiProperty()
   @IsString()

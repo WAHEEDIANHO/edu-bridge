@@ -33,8 +33,14 @@ export class User extends DbEntity implements IEntity {
   googleId?: string;
   @Column({ nullable: false })
   firstName: string;
+  // @Column({ nullable: true})
+  // middleName?: string;
   @Column({ nullable: true})
-  middleName?: string;
+  zipCode?: string;
+  @Column({ nullable: true})
+  country?: string;
+  @Column({ nullable: true})
+  state?: string;
   @Column({ nullable: false })
   lastName: string;
   @Column({ nullable: true })
@@ -44,10 +50,11 @@ export class User extends DbEntity implements IEntity {
   isAdmin: boolean;
   @Column({ default: false })
   isVerified: boolean;
-  @Column({type: 'varchar', enum: UserGender, nullable: true})
-  gender: UserGender;
+  // @Column({type: 'varchar', enum: UserGender, nullable: true})
+  // gender: UserGender;
   @Column({ nullable: true})
   imageUrl?: string;
+  name: string;
 
   // @OneToOne(() => Student, (student: Student) => student.user, { onDelete: 'CASCADE' })
   // student?: Student;
@@ -56,11 +63,17 @@ export class User extends DbEntity implements IEntity {
   // teacher?: Teacher;
 
   // @OneToOne(() )
+  
+  get fullNameWithInitial(): string {
+    return `${this.firstName[0].toUpperCase() + this.firstName.slice(1)} ${(this.lastName)[0].toUpperCase()}.`;
+  }
+  
 
   toJSON() {
     delete this.password;
     // delete this.createdAt;
     // delete this.updatedAt;
+    this.name = `${this.firstName[0].toUpperCase() + this.firstName.slice(1)} ${(this.lastName)[0].toUpperCase()}.`;
     return this;
   }
 }

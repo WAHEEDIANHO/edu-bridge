@@ -82,8 +82,8 @@ export class BookingController {
 
     // Calculate total cost based on mentor's rate and booking duration
     const ratePerHour = Number(mentor.ratePerHour);
-    const durationInHours = Number(Number(dto.duration / 60).toFixed(2)); // Convert minutes to hours
-    const totalCost = ratePerHour * durationInHours;
+    // const durationInHours = Number(Number(dto.duration / 60).toFixed(2)); // Convert minutes to hours
+    const totalCost = ratePerHour * dto.duration;
 
     // Check if mentee has sufficient funds in wallet
     const menteeWallet = await this.walletService.getWalletByUserId(student.user.id);
@@ -101,7 +101,7 @@ export class BookingController {
     booking.mentee = student;
     booking.slot = dto.slotId as any //selectedSlot;
     booking.note = dto?.note || "";
-    booking.duration = durationInHours; //dto.duration;
+    booking.duration = dto.duration; //durationInHours;
     booking.prefer_time = dto.preferTime;
     booking.prefer_date = dto.preferDate;
     booking.subject = dto.subject as any;
@@ -204,7 +204,7 @@ export class BookingController {
           amount: totalCost,
           bookingId: booking.id,
           mentorWalletAccountNo: mentorWallet.accountNo,
-          mentorName: `${booking.mentor.user.firstName} ${booking.mentor.user.lastName}`
+          mentorName: booking.mentor.user.fullNameWithInitial  //`${booking.mentor.user.firstName} ${booking.mentor.user.lastName}`
         };
 
         // Create a transaction record with metadata

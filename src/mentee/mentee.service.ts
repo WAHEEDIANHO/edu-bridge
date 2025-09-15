@@ -64,19 +64,22 @@ export class MenteeService extends GeneralService<Mentee> implements IMenteeServ
   }
 
   async getMyTutor(query: PaginationQueryDto<any>, id: string) {
-    const slots = this.availabilitySlotService.findAll(query, ['bookings']);
+    const slots = await this.availabilitySlotService.findAll(query, ['bookings']);
     const { data }: any = slots || {};
-    const bookings = data?.map((slot) => slot.bookings.filter((booking: any) => booking.id == id)).flat() || [];
+    const bookings = data?.map((slot) => slot.bookings).flat() || []; //.filter((booking: any) => booking.mentee.id == id)
 
     let myMentor: any[] = [];
+    
     for (const booking of bookings) {
 
-      const obx: any = await this.bookingService.findById(booking.id, ['mentor', 'mentor.user',  'mentor.competencySubjects']);
-      console.log("obx", obx.mentee, id);
-      // if(obx.mentee.id == id)
-      myMentor.push(obx);
+      const obx: any = await this.bookingService.findById(booking.id, ['mentee', 'mentor', 'mentor.user',  'mentor.competencySubjects']);
+      if(obx.mentee.id == id)
+        myMentor.push(obx.mentor);
     }
-    return  myMentor;
+
+    return Array.from(
+      new Map(myMentor.map((item) => [item.id, item])).values(),
+    );
   }
 
   async createMenteeWithWallet(mentee: Mentee): Promise<Mentee> {
