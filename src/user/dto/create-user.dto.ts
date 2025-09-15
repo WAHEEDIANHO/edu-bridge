@@ -52,6 +52,21 @@ export class CreateUserDto  {
   @IsOptional()
   profilePicture?: string
 
+  @ApiProperty({ required: false })
+  @IsString()
+  @IsOptional()
+  zipCode?: string
+
+  @ApiProperty({ required: false })
+  @IsString()
+  @IsOptional()
+  state?: string
+
+  @ApiProperty({ required: false })
+  @IsString()
+  @IsOptional()
+  country?: string
+
   // @ApiProperty()
   role: UserRole;
 

@@ -48,6 +48,7 @@ export class AuthController {
           access_token,
           user: {
             ...user,
+            name: user.fullNameWithInitial,
             accountNo: accountNo?.accountNo
           }
         }),
