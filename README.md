@@ -1,119 +1,68 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# 📌 Edu Bridge
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+> ✨ *EduBridge is an educational platform that connects mentors and mentees for online learning sessions. The application is built using the [Nest](https://nestjs.com/) framework.*
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+---
 
-## Description
+## 🚀 Features
 
-EduBridge is an educational platform that connects mentors and mentees for online learning sessions. The application is built using the [Nest](https://github.com/nestjs/nest) framework.
+- ✅ **User Management:** Registration and authentication for mentors and mentees
+- ✅ **Booking System:** Schedule and manage learning sessions
+- ✅ **Messaging:** Real-time communication between users
+- ✅ **Payment Processing:** Secure payment handling for sessions
+- ✅ **Payment Processing:** Secure payment handling for sessions
 
-### Key Features
 
-- **User Management**: Registration and authentication for mentors and mentees
-- **Booking System**: Schedule and manage learning sessions
-- **Messaging**: Real-time communication between users
-- **Payment Processing**: Secure payment handling for sessions
-- **Video Conferencing**: Integrated Zoom SDK for virtual classrooms
+---
 
-### Zoom SDK Integration
+## 🏗️ Tech Stack
 
-EduBridge integrates the Zoom SDK to provide seamless video conferencing capabilities:
+**Backend:** NestJS   
+**Database:** PostgreSQL   
 
-- Create Zoom meetings when a booking is confirmed
-- Join Zoom meetings directly from the application
-- Role-based access (mentors as hosts, mentees as participants)
+---
 
-For detailed information about the Zoom SDK integration, see the [Zoom Integration Documentation](./docs/zoom-integration.md).
-
-## Project setup
+## 📂 Project Structure
 
 ```bash
-$ npm install
+/project-root
+  ├── src/            # Source code
+  │   ├── activity/           # Activity module
+  │   ├── admin/              # Admin module
+  │   ├── auth/               # Authentication module
+  │   ├── availability-slot/  # Availability slot module
+  │   ├── booking/            # Booking module
+  │   ├── conference/         # Conference module
+  │   ├── email-service/      # Email service module
+  │   ├── file-upload/        # File upload module
+  │   ├── mentee/             # Mentee module
+  │   ├── mentor/             # Mentor module
+  │   ├── messages/           # Messages module
+  │   ├── payment/            # Payment module
+  │   ├── performance/        # Performance module
+  │   ├── public/             # Public assets
+  │   ├── rating/             # Rating module
+  │   ├── session/            # Session module
+  │   ├── transaction/        # Transaction module
+  │   ├── user/               # User module
+  │   ├── utils/              # Utilities
+  │   ├── wallet/             # Wallet module
+  │   ├── app-exception.filter.ts
+  │   ├── app.data-source.ts
+  │   ├── app.module.ts
+  │   ├── main.ts
+  ├── public/         # Static files
+  ├── combined.log    # Combined log file
+  ├── error.log       # Error log file
+  ├── eslint.config.mjs # ESLint config
+  ├── nest-cli.json   # Nest CLI config
+  ├── package.json    # NPM package config
+  ├── tsconfig.build.json # TypeScript build config
+  ├── tsconfig.json   # TypeScript config
+  ├── README.md       # This file
 ```
 
-## Compile and run the project
 
-```bash
-# development
-$ npm run start
-
-# watch mode
-$ npm run start:dev
-
-# production mode
-$ npm run start:prod
-```
-
-## Run tests
-
-```bash
-# unit tests
-$ npm run test
-
-# e2e tests
-$ npm run test:e2e
-
-# test coverage
-$ npm run test:cov
-```
-
-## Deployment
-
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
-
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
-
-```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
-```
-
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
-
-## Resources
-
-Check out a few resources that may come in handy when working with NestJS:
-
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
-
-## Support
-
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
-
-## Stay in touch
-
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
-
-## License
-
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
 
 ## Project Structure
 
@@ -159,3 +108,7 @@ Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
   ├── zoom.html       # Zoom integration page
   ├── README.md       # This file
 ```
+
+## 📜 License
+
+MIT License © 2025 [Safiu Waheed](https://waheedianho.codes)  
