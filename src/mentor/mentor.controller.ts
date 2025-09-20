@@ -117,7 +117,7 @@ export class MentorController {
 
      delete updateMentorDto?.email;
      delete updateMentorDto?.role;
-     delete updateMentorDto?.gender;
+     // delete updateMentorDto?.gender;
 
     await this.userService.update(user.id, updateMentorDto as UpdateUserDto);
 

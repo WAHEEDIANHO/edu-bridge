@@ -5,25 +5,30 @@ import { ApiProperty } from '@nestjs/swagger';
 import { IsArray, IsCurrency, IsEnum, IsOptional, IsString } from 'class-validator';
 
 export class CreateMentorDto extends CreateUserDto {
-  @ApiProperty({ required: true })
-  @IsString({ message: 'subject must be a string' })
-  subject: string;
-  @ApiProperty({ required: true })
+  // @ApiProperty({ required: true })
+  // @IsString({ message: 'subject must be a string' })
+  // subject: string;
+  @ApiProperty({ required: false })
+  @IsOptional()
   @IsString({ message: 'value must be a string' })
   introVideoUrl: string;
-  @ApiProperty({required: true})
+  @ApiProperty({required: false})
+  @IsOptional()
   @IsString({message: 'value must be a string' })
   bio: string;
-  @ApiProperty({ required: true })
+  @ApiProperty({ required: false })
+  @IsOptional()
   @IsCurrency({ allow_decimal: true, allow_negatives: false })
-  ratePerHour: number;
+  ratePerHour?: number;
   // @ApiProperty({ required: true, enum: AvailabilityStatus })
   // @IsEnum(AvailabilityStatus, { message: 'availability must be one of the following values: AVAILABLE, ADVANCE' })
   // availability: AvailabilityStatus;
   @ApiProperty({ required: true })
+  @IsOptional()
   @IsString({ message: 'value must be a string' })
   profilePictureUrl: string;
   @ApiProperty({ required: false })
+  @IsOptional()
   @IsString({ message: 'value must be a string' })
   location: string;
   @ApiProperty({required: false, example:  [{ subjectId: '12345' }] })
