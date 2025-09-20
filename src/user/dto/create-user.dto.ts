@@ -43,9 +43,9 @@ export class CreateUserDto  {
   @IsString()
   lastName: string;
 
-  @ApiProperty()
-  @IsEnum(["male", "female"], { message: "value must be male or female"})
-  gender?: UserGender;
+  // @ApiProperty()
+  // @IsEnum(["male", "female"], { message: "value must be male or female"})
+  // gender?: UserGender;
 
   @ApiProperty({ required: false })
   @IsString()
