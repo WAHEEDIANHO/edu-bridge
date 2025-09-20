@@ -11,10 +11,10 @@ import { Rating } from '../../rating/entities/rating.entity';
 @Entity("tbl_mentors")
 export class Mentor extends DbEntity implements IEntity {
 
-  @Column({ type: 'varchar', nullable: false })
-  subject: string;
+  // @Column({ type: 'varchar', nullable: false })
+  // subject: string;
 
-  @Column({ type: 'varchar', nullable: false })
+  @Column({ type: 'varchar', nullable: true })
   introVideoUrl: string;
 
   @Column({ type: 'text', nullable: true })

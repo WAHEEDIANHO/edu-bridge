@@ -102,7 +102,7 @@ export class MenteeController {
 
     delete updateMenteeDto?.email;
     delete updateMenteeDto?.role;
-    delete updateMenteeDto?.gender;
+    // delete updateMenteeDto?.gender;
 
     await this.userService.update(user.id, updateMenteeDto as UpdateUserDto);
 

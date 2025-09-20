@@ -13,6 +13,7 @@ class PreferredSubject {
 export class CreateMenteeDto extends CreateUserDto{
 
   @ApiProperty({required: false, enum: MenteeLevel})
+  @IsOptional()
   @IsEnum(MenteeLevel, {message: 'level must be one of the following values: PRIMARY, UNDERGRADUATE, POSTGRADUATE'})
   level: MenteeLevel;
 
@@ -23,10 +24,12 @@ export class CreateMenteeDto extends CreateUserDto{
   preferredSubjects: [{ subjectId: string }];
 
   @ApiProperty({required: false})
+  @IsOptional()
   @IsString({message: 'value must be a string'})
   profilePictureUrl: string;
 
   @ApiProperty({required: false})
+  @IsOptional()
   @IsString({message: 'value must be a string'})
   location: string;
 }
