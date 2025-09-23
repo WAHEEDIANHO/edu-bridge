@@ -24,6 +24,7 @@ import { ConferenceService } from '../conference/conference.service';
 import { HttpModule } from '@nestjs/axios';
 import { SessionModule } from '../session/session.module';
 import { WalletModule } from '../transaction/wallet/wallet.module';
+import { PaymentModule } from '../payment/payment.module';
 // import { BookingEventHandler } from './events/booking-event.handler';
 
 @Module({
@@ -35,7 +36,8 @@ import { WalletModule } from '../transaction/wallet/wallet.module';
     AvailabilitySlotModule, 
     ConferenceModule, 
     forwardRef(() => SessionModule), 
-    forwardRef(() => WalletModule)
+    forwardRef(() => WalletModule),
+    PaymentModule
   ],
   controllers: [BookingController],
   providers: [BookingService, MentorService, MenteeService,

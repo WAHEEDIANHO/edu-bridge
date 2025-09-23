@@ -42,6 +42,9 @@ import { PaymentDto } from '../transaction/wallet/dto/payment.dto';
 import { WalletTransaction } from '../transaction/entities/transaction.entity';
 import { TransactionService } from '../transaction/transaction.service';
 import { Wallet } from '../transaction/wallet/entities/wallet.entity';
+import { PaymentService } from '../payment/payment.service';
+import { Payment } from '../payment/entities/payment.entity';
+import { UserService } from '../user/user.service';
 
 
 
@@ -55,6 +58,8 @@ export class BookingController {
     private readonly conferenceService: ConferenceService,
     private readonly sessionService: SessionService,
     private readonly walletService: WalletService,
+    private readonly paymentService: PaymentService,
+    private readonly userService: UserService,
     // private readonly transactionService: TransactionService,
     // Assuming this is the service that handles conference/zoom meetings
     // private readonly eventBus: EventBus
@@ -178,98 +183,74 @@ export class BookingController {
       const durationInHours = booking.duration; // Convert minutes to hours
       const totalCost = ratePerHour * durationInHours;
 
-      // Get mentee's wallet
-      const menteeWallet = await this.walletService.getWalletByUserId(booking.mentee.user.id);
-      if (!menteeWallet) {
-        return res.status(HttpStatus.BAD_REQUEST).json(res.formatResponse(HttpStatus.BAD_REQUEST, "Mentee does not have a wallet"));
-      }
+      // Determine payment route: use card pay-as-you-go first; fallback to wallet if available
+      const mentee = booking.mentee.user;
+      const mentor = booking.mentor.user;
+      // Attempt card charge using saved default card
+      const reference = `BOOKING-${booking.id}`;
 
-      // Check if mentee has sufficient funds
-      const walletBalance = await this.walletService.getWalletBalance(menteeWallet.accountNo);
-      if (walletBalance < totalCost) {
-        return res.status(HttpStatus.BAD_REQUEST).json(res.formatResponse(HttpStatus.BAD_REQUEST, `Insufficient funds. Required: ${totalCost}, Available: ${walletBalance}`));
-      }
-
-      // Get mentor's wallet
-      const mentorWallet = await this.walletService.getWalletByUserId(booking.mentor.user.id);
-      if (!mentorWallet) {
-        return res.status(HttpStatus.BAD_REQUEST).json(res.formatResponse(HttpStatus.BAD_REQUEST, "Mentor does not have a wallet"));
-      }
-
-      // Debit mentee's wallet (but don't credit mentor's wallet yet)
       try {
-        // Create payment data
-        const paymentData = {
-          fromAccountNo: menteeWallet.accountNo,
-          amount: totalCost,
-          bookingId: booking.id,
-          mentorWalletAccountNo: mentorWallet.accountNo,
-          mentorName: booking.mentor.user.fullNameWithInitial  //`${booking.mentor.user.firstName} ${booking.mentor.user.lastName}`
-        };
-
-        // Create a transaction record with metadata
-        const transaction = new WalletTransaction();
-        transaction.customerAccountNo = menteeWallet.accountNo;
-        transaction.drAmount = totalCost;
-        transaction.crAmount = 0;
-        transaction.type = 'BOOKING_PAYMENT';
-        transaction.narration = `Payment for booking #${booking.id} with ${paymentData.mentorName}`;
-        transaction.status = 'completed';
-        transaction.transRef = `BOOKING-${booking.id}`;
-        transaction.transNo = `TR${Date.now()}${Math.floor(Math.random() * 10000)}`;
-        transaction.metadata = JSON.stringify({
-          bookingId: booking.id,
-          mentorWalletAccountNo: mentorWallet.accountNo,
-          amount: totalCost,
-          pendingCredit: true
-        });
-
-        // Use a database transaction to ensure atomicity
-        const queryRunner = this.walletService.getDataSource().createQueryRunner();
-        await queryRunner.connect();
-        await queryRunner.startTransaction();
-
-        try {
-          // Save transaction within the transaction context
-          await queryRunner.manager.save(transaction);
-
-          // Update wallet balance within the transaction context
-          const wallet = await queryRunner.manager.findOne(Wallet, {
-            where: { accountNo: menteeWallet.accountNo }
+        // Try card first
+        const defaultPm = await this.paymentService.getDefaultPaymentMethod(mentee.id);
+        if (defaultPm) {
+          const charge = await this.paymentService.chargeAuthorization({
+            email: mentee.email,
+            authorization_code: defaultPm.authorizationCode,
+            amount: totalCost,
+            reference,
+            metadata: { type: 'booking_charge', bookingId: booking.id, menteeId: mentee.id, mentorId: mentor.id }
           });
-          
-          if (!wallet) {
-            throw new Error(`Wallet with account number ${menteeWallet.accountNo} not found`);
+
+          if (!(charge?.status && (charge.data?.status === 'success' || charge.data?.status === 'successful'))) {
+            throw new Error('Card charge not successful');
           }
-          
-          // Calculate current balance
-          const transactions = await queryRunner.manager.find(WalletTransaction, {
-            where: { customerAccountNo: menteeWallet.accountNo }
-          });
-          
-          const currentBalance = transactions.reduce((sum, tx) => {
-            const drAmount = tx.drAmount || 0;
-            const crAmount = tx.crAmount || 0;
-            return sum - Number(drAmount) + Number(crAmount);
-          }, 0);
-          
-          // Update wallet balance
-          wallet.balance = currentBalance - totalCost;
-          await queryRunner.manager.save(wallet);
+        } else {
+          // If no card, fallback to wallet debit as existing flow
+          const menteeWallet = await this.walletService.getWalletByUserId(mentee.id);
+          if (!menteeWallet) {
+            return res.status(HttpStatus.BAD_REQUEST).json(res.formatResponse(HttpStatus.BAD_REQUEST, 'No default card and no wallet found'));
+          }
+          const walletBalance = await this.walletService.getWalletBalance(menteeWallet.accountNo);
+          if (walletBalance < totalCost) {
+            return res.status(HttpStatus.BAD_REQUEST).json(res.formatResponse(HttpStatus.BAD_REQUEST, `Insufficient funds and no card. Required: ${totalCost}, Available: ${walletBalance}`));
+          }
+          // Create a wallet transaction reservation immediately (debit mentee, hold tutor credit)
+          const mentorWallet = await this.walletService.getWalletByUserId(mentor.id);
+          if (!mentorWallet) {
+            return res.status(HttpStatus.BAD_REQUEST).json(res.formatResponse(HttpStatus.BAD_REQUEST, 'Mentor does not have a wallet'));
+          }
+          const transaction = new WalletTransaction();
+          transaction.customerAccountNo = menteeWallet.accountNo;
+          transaction.drAmount = totalCost;
+          transaction.crAmount = 0;
+          transaction.type = 'BOOKING_PAYMENT';
+          transaction.narration = `Payment for booking #${booking.id} with ${mentor.fullNameWithInitial}`;
+          transaction.status = 'completed';
+          transaction.transRef = reference;
+          transaction.transNo = `TR${Date.now()}${Math.floor(Math.random() * 10000)}`;
+          transaction.metadata = JSON.stringify({ bookingId: booking.id, mentorWalletAccountNo: mentorWallet.accountNo, amount: totalCost, pendingCredit: true });
 
-          // Commit the transaction
-          await queryRunner.commitTransaction();
-        } catch (error) {
-          // Rollback the transaction in case of error
-          await queryRunner.rollbackTransaction();
-          throw error;
-        } finally {
-          // Release the query runner
-          await queryRunner.release();
+          const queryRunner = this.walletService.getDataSource().createQueryRunner();
+          await queryRunner.connect();
+          await queryRunner.startTransaction();
+          try {
+            await queryRunner.manager.save(transaction);
+            const wallet = await queryRunner.manager.findOne(Wallet, { where: { accountNo: menteeWallet.accountNo } });
+            if (!wallet) throw new Error(`Wallet with account number ${menteeWallet.accountNo} not found`);
+            const transactions = await queryRunner.manager.find(WalletTransaction, { where: { customerAccountNo: menteeWallet.accountNo } });
+            const currentBalance = transactions.reduce((sum, tx) => sum - Number(tx.drAmount || 0) + Number(tx.crAmount || 0), 0);
+            wallet.balance = currentBalance - totalCost;
+            await queryRunner.manager.save(wallet);
+            await queryRunner.commitTransaction();
+          } catch (e) {
+            await queryRunner.rollbackTransaction();
+            throw e;
+          } finally {
+            await queryRunner.release();
+          }
         }
-      } catch (error) {
-        console.error('Error processing payment:', error);
-        return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json(res.formatResponse(HttpStatus.INTERNAL_SERVER_ERROR, "Error processing payment"));
+      } catch (err) {
+        return res.status(HttpStatus.BAD_REQUEST).json(res.formatResponse(HttpStatus.BAD_REQUEST, 'Payment failed: ' + (err as any)?.message));
       }
 
       const [hours, minutes] = booking.prefer_time.split(':').map(Number);

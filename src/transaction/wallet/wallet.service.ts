@@ -1112,48 +1112,61 @@ export class WalletService {
     const event = req.body as any;
     // Handle the event
     switch (event.event) {
-      case 'charge.success':
-        
-        // // console.log(event.data.metadata, "name========")
-        const mtdata = event.data.metadata;
-        const transaction = await this.transactionService.getTransactionsByReference(mtdata.fundingDetails.accountNo, event.data.reference);
-        if (!transaction) {
-          this.logger.warn(`Transaction with reference ${event.data.reference} not found for wallet funding`);
-          return { status: "failed", message: 'Transaction not found' };
+      case 'charge.success': {
+        const meta = event.data.metadata || {};
+        // Case 1: Card save flow
+        if (meta?.type === 'card_save' && meta?.userId) {
+          try {
+            const auth = event.data.authorization;
+            if (auth?.authorization_code) {
+              await (this as any).paymentService?.upsertPaymentMethod?.(meta.userId, {
+                authorization_code: auth.authorization_code,
+                reusable: !!auth.reusable,
+                brand: auth.card_type,
+                last4: auth.last4,
+                exp_month: auth.exp_month,
+                exp_year: auth.exp_year,
+                is_default: true,
+              });
+              this.logger.log(`Saved default card for user ${meta.userId}`);
+            }
+          } catch (e) {
+            this.logger.error(`Failed to save card for user ${meta.userId}: ${e?.message}`);
+          }
+          break;
         }
-        
-        // console.log(transaction.crAmount, event.data.amount / 100, transaction.status, "amount========")
-        
-        if ( Number(transaction.crAmount).toFixed(2) !== Number(event.data.amount / 100).toFixed(2) || transaction.status === 'completed') {
-          this.logger.warn(`Transaction amount mismatch or already completed for reference ${event.data.reference}`);
-          return { status: "failed", message: 'Transaction amount mismatch or already completed' };
+        // Case 2: Wallet funding flow (existing)
+        if (meta?.fundingDetails?.accountNo) {
+          const transaction = await this.transactionService.getTransactionsByReference(meta.fundingDetails.accountNo, event.data.reference);
+          if (!transaction) {
+            this.logger.warn(`Transaction with reference ${event.data.reference} not found for wallet funding`);
+            return { status: "failed", message: 'Transaction not found' };
+          }
+          if ( Number(transaction.crAmount).toFixed(2) !== Number(event.data.amount / 100).toFixed(2) || transaction.status === 'completed') {
+            this.logger.warn(`Transaction amount mismatch or already completed for reference ${event.data.reference}`);
+            return { status: "failed", message: 'Transaction amount mismatch or already completed' };
+          }
+          transaction.status = 'completed';
+          const metadata = {
+            ...JSON.parse(transaction.metadata || '{}'),
+            paymentGatewayResponse: event.data
+          };
+          transaction.metadata = JSON.stringify(metadata);
+          this.signTransaction(transaction);
+          await this.transactionRepository.save(transaction);
+          await this.updateWalletBalance(meta.fundingDetails.accountNo);
+          this.logAuditEvent('WALLET_FUNDED_VIA_PAYSTACK', transaction.wallet?.customerId || 'unknown', {
+            transactionId: transaction.id,
+            accountNo: meta.fundingDetails.accountNo,
+            amount: transaction.crAmount,
+            reference: event.data.reference,
+            paymentGateway: 'Paystack'
+          });
+          break;
         }
-        // Update transaction status to completed
-        transaction.status = 'completed';
-        // Update metadata with payment gateway response
-        const metadata = {
-          ...JSON.parse(transaction.metadata || '{}'),
-          paymentGatewayResponse: event.data
-        };
-        transaction.metadata = JSON.stringify(metadata);
-        this.signTransaction(transaction);
-        await this.transactionRepository.save(transaction);
-        // Update wallet balance
-        await this.updateWalletBalance(event.data.metadata.fundingDetails.accountNo);
-        // Log the successful funding
-        this.logAuditEvent('WALLET_FUNDED_VIA_PAYSTACK', transaction.wallet?.customerId || 'unknown', {
-          transactionId: transaction.id,
-          accountNo: event.data.metadata.fundingDetails.accountNo,
-          amount: transaction.crAmount,
-          reference: event.data.reference,
-          paymentGateway: 'Paystack'
-        }); 
-        
-        
-        // Then define and call a function to handle the event charge.success
-        // this.
-        // console.log("success charge",/ event.data.reference);
+        // Other charge.success without known metadata: ignore
         break;
+      }
       case 'transfer.success':
         // Then define and call a function to handle the event transfer.success
         // console.log(event);
