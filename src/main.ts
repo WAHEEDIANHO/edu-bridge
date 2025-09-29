@@ -31,7 +31,7 @@ async function bootstrap() {
     unauthorizedResponse: 'Unauthorized access to API documentation',
   }))
 
-  app.use(helmet())
+  // app.use(helmet())
   // app.use(cookieParser());
   // app.use(csurf({ cookie: true }));
   // app.use(rateLimit({ windowMs: 15*60*1000, max: 100 })); // 15 minutes, 100 requests
