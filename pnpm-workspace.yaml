@@ -1,6 +1,0 @@
-allowBuilds:
-  '@scarf/scarf': true
-  '@swc/core': true
-  bcrypt: true
-  core-js: true
-  msgpackr-extract: true
