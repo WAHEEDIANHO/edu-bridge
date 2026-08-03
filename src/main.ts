@@ -3,7 +3,7 @@ import { AppModule } from './app.module';
 import helmet from 'helmet';
 import * as cookieParser from 'cookie-parser';
 import * as csurf from 'csurf';
-import * as rateLimit  from 'express-rate-limit';
+import * as rateLimit from 'express-rate-limit';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston/dist/winston.constants';
 import { AppExceptionFilter } from './app-exception.filter';
@@ -12,16 +12,16 @@ import * as basicAuth from 'express-basic-auth';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { join } from 'path';
 async function bootstrap() {
- const app = await NestFactory.create<NestExpressApplication>(AppModule);
- 
+  const app = await NestFactory.create<NestExpressApplication>(AppModule);
+
   // Set global prefix for all API routes
   // app.setGlobalPrefix('api');
-  
+
   // Configure static file serving
   app.useStaticAssets(join(__dirname, '..', 'public'), {
     prefix: '/static',
   });
-  
+
   app.enableCors();
 
   app.use('/api-docs', basicAuth({
@@ -52,8 +52,6 @@ async function bootstrap() {
 
   app.useLogger(app.get(WINSTON_MODULE_NEST_PROVIDER))
 
-  console.log('Documentation Created successfully.');
-
-  await app.listen(process.env.PORT ?? 3000);
+  await app.listen(process.env.PORT ?? 5050);
 }
 bootstrap();

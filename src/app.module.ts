@@ -54,7 +54,7 @@ import { BullModule } from '@nestjs/bull';
       useFactory: async (configService: ConfigService) => ({
         type: 'postgres',
         host: configService.get<string>('DB_HOST', 'localhost'),
-        port: configService.get<number>('DB_PORT', 5432),
+        port: parseInt(configService.get<string>('DB_PORT', '5432'), 10),
         username: configService.get<string>('DB_USERNAME', 'user'),
         password: configService.get<string>('DB_PASSWORD', 'password'),
         database: configService.get<string>('DB_NAME', 'edu-bridge'),
@@ -63,12 +63,7 @@ import { BullModule } from '@nestjs/bull';
         migrations: [__dirname + '/migrations/**/*{.ts,.js}'],
         entities: [__dirname + '/**/*.entity{.ts,.js}'],
         subscribers: [__dirname + '/**/*.subscriber{.ts,.js}'],
-        extra: {
-          trustServerCertificate: true, // Required for self-signed certs
-        },
-        ssl: {
-          rejectUnauthorized: false
-        }
+        // SSL is disabled: the DB server does not support SSL connections
       })
     }),
     AuthModule,

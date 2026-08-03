@@ -26,7 +26,7 @@ import { ConfigService } from '@nestjs/config';
 @Injectable()
 export class AppDataSource {
 
-  constructor(private readonly configService: ConfigService) {}
+  constructor(private readonly configService: ConfigService) { }
 
   createDataSource(): DataSource {
     return new DataSource({
@@ -39,12 +39,12 @@ export class AppDataSource {
       synchronize: false,
       logging: true,
       // entities: [__dirname + '/**/*.entity{.ts,.js}'],
-      extra: {
-        trustServerCertificate: true, // Required for self-signed certs
-      },
-      ssl: {
-        rejectUnauthorized: false
-      }
+      // extra: {
+      //   trustServerCertificate: true, // Required for self-signed certs
+      // },
+      // ssl: {
+      //   rejectUnauthorized: false
+      // }
     });
   }
 }
